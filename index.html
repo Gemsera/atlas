@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+      content="width=device-width, initial-scale=1"
     />
     <title>
       PoE Atlas Passive Tree Planner – Plan & Share Atlas Trees | valdo.tools
@@ -14,6 +14,11 @@
       content="Free Path of Exile atlas passive tree planner. Allocate atlas points, see which league mechanics are guaranteed to spawn, and share your tree with a link. Standard and Ruthless."
     />
     <link rel="canonical" href="https://valdo.tools/atlas/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#0b0c0e" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="valdo.tools" />
     <meta property="og:title" content="PoE Atlas Passive Tree Planner" />
@@ -22,17 +27,59 @@
       content="Plan your atlas tree, check guaranteed league mechanics, and share it with one link."
     />
     <meta property="og:url" content="https://valdo.tools/atlas/" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="https://valdo.tools/atlas/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Path of Exile atlas passive tree with allocated nodes in the valdo.tools Atlas Planner"
+    />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PoE Atlas Passive Tree Planner" />
+    <meta
+      name="twitter:description"
+      content="Plan your atlas tree, check guaranteed league mechanics, and share it with one link."
+    />
+    <meta name="twitter:image" content="https://valdo.tools/atlas/og.jpg" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "PoE Atlas Passive Tree Planner",
+        "alternateName": "valdo.tools Atlas Planner",
         "url": "https://valdo.tools/atlas/",
+        "description": "Free Path of Exile 1 atlas passive tree planner. Allocate atlas passive points, see which league mechanics your tree guarantees in every map, and share trees with a short link. Supports Standard and Ruthless atlas trees.",
         "applicationCategory": "GameApplication",
+        "applicationSubCategory": "Path of Exile planner",
         "operatingSystem": "Any",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "browserRequirements": "Requires JavaScript and a modern web browser",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "softwareVersion": "3.30",
+        "image": "https://valdo.tools/atlas/og.jpg",
+        "screenshot": "https://valdo.tools/atlas/og.jpg",
+        "featureList": [
+          "Allocate atlas passive points along the shortest path",
+          "See which league mechanics are guaranteed to spawn",
+          "Short shareable tree links",
+          "Import and export pathofexile.com atlas tree codes",
+          "Combined stat summary",
+          "Standard and Ruthless atlas trees"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "about": {
+          "@type": "VideoGame",
+          "name": "Path of Exile",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Grinding Gear Games"
+          }
+        },
         "isPartOf": {
           "@type": "WebSite",
           "name": "valdo.tools",
@@ -40,7 +87,10 @@
         }
       }
     </script>
+    <link rel="preload" href="sprites.json" as="fetch" crossorigin />
+    <link rel="preload" href="tree-standard.json" as="fetch" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -231,6 +281,40 @@
         overflow: auto;
         padding: 14px 16px 24px;
         flex: 1;
+      }
+      #about[hidden],
+      #pbody[hidden] {
+        display: none;
+      }
+      #about h2 {
+        font: 700 17px Cinzel, serif;
+        color: var(--gold2);
+        margin: 0 0 8px;
+      }
+      #about h3 {
+        font: 600 12px Inter, sans-serif;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin: 18px 0 6px;
+      }
+      #about p,
+      #about li {
+        color: var(--text);
+        font-size: 13px;
+        line-height: 1.55;
+        margin: 0 0 8px;
+      }
+      #about ul {
+        padding-left: 18px;
+        margin: 0 0 8px;
+      }
+      #about a {
+        color: var(--gold2);
+      }
+      #about .small {
+        color: var(--dim);
+        font-size: 12px;
       }
       .empty {
         color: var(--dim);
@@ -641,9 +725,13 @@
     </style>
   </head>
   <body>
-    <canvas id="tree"></canvas>
+    <canvas
+      id="tree"
+      role="img"
+      aria-label="Interactive Path of Exile atlas passive skill tree"
+    ></canvas>
     <header>
-      <h1>Atlas Tree<small id="ver"></small></h1>
+      <h1>Atlas Planner<small id="ver"></small></h1>
       <select id="treeSel" title="Tree variant">
         <option value="standard">Standard</option>
         <option value="ruthless">Ruthless</option>
@@ -672,15 +760,86 @@
         <button data-tab="node" class="on">Node</button>
         <button data-tab="spawns">Spawns</button>
         <button data-tab="summary">Summary</button>
-        <button class="x" id="closePanel" title="Hide panel">×</button>
+        <button data-tab="about">Guide</button>
+        <button class="x" id="closePanel" title="Hide panel" aria-label="Hide panel">
+          ×
+        </button>
       </div>
-      <div class="pbody" id="pbody"></div>
+      <div class="pbody" id="pbody" hidden></div>
+      <section class="pbody" id="about" aria-labelledby="about-title">
+        <h2 id="about-title">Path of Exile Atlas Passive Tree Planner</h2>
+        <p>
+          Plan your Path of Exile 1 atlas passive tree before you spend a
+          single point. Allocate nodes, compare strategies and share your
+          finished atlas tree with one short link. The planner uses Grinding
+          Gear Games' official 3.30 atlas tree data for both the Standard and
+          Ruthless atlas.
+        </p>
+        <h3>How to use it</h3>
+        <ul>
+          <li>
+            Click any node to allocate it. The planner takes the shortest path
+            from your allocated nodes and shows the point cost before you click.
+          </li>
+          <li>
+            Click an allocated node to remove it, along with anything that only
+            connected through it. Undo and Reset are in the top bar.
+          </li>
+          <li>
+            Search by name or stat, for example <em>Strongbox</em>,
+            <em>Ultimatum</em> or <em>Map Drop Chance</em>, and press Enter to
+            jump between matches.
+          </li>
+          <li>
+            Some notables let you choose one of several effects. Pick yours in
+            the Node tab after allocating it.
+          </li>
+          <li>On phones, tap a node to inspect it, then use Allocate.</li>
+        </ul>
+        <h3>Guaranteed league mechanics</h3>
+        <p>
+          The Spawns tab adds up every atlas passive that changes spawn chances
+          and shows which content your tree guarantees in every map. Surpassing
+          Chance works in steps of 100%: 235% means two guaranteed spawns and a
+          35% chance for a third. In 3.30 the atlas tree can guarantee
+          Strongboxes, Shrines, Rogue Exiles, Essences, Harvest (Sacred Flora),
+          Tormented Spirits, Ore Deposits and Mercenaries.
+          Delirium, Beyond, Mirage, Viridian Wildwood and Buried Sentinel only
+          get increased chance, which can't guarantee a spawn on its own.
+        </p>
+        <h3>Share and import atlas trees</h3>
+        <p>
+          The address bar always holds your current tree, so you can bookmark
+          it or send it to a friend. Share gives a short link, a long link that
+          keeps working after tree updates, and a code in the same format as
+          the pathofexile.com atlas tree. You can also import atlas tree links
+          from pathofexile.com.
+        </p>
+        <h3>Summary</h3>
+        <p>
+          The Summary tab lists your keystones and notables and combines every
+          stat on your tree, such as total increased Maps found or chance for
+          maps to drop a tier higher.
+        </p>
+        <p class="small">
+          Part of <a href="https://valdo.tools/">valdo.tools</a>, along with
+          <a href="https://valdo.tools/lab/">Labyrinth of the Day</a>. This is a
+          fan-made tool and isn't affiliated with or endorsed by Grinding Gear
+          Games.
+        </p>
+      </section>
+      <noscript>
+        <p style="padding: 16px">
+          The atlas tree planner needs JavaScript to draw the tree. Please enable
+          it to plan and share your Path of Exile atlas passive tree.
+        </p>
+      </noscript>
     </aside>
 
     <div id="zoom">
-      <button id="zin" title="Zoom in">+</button>
-      <button id="zout" title="Zoom out">−</button>
-      <button id="zfit" title="Fit tree">⤢</button>
+      <button id="zin" title="Zoom in" aria-label="Zoom in">+</button>
+      <button id="zout" title="Zoom out" aria-label="Zoom out">−</button>
+      <button id="zfit" title="Fit tree" aria-label="Fit whole tree">⤢</button>
     </div>
 
     <div id="tip"></div>
@@ -2034,6 +2193,8 @@
       }
       function setTab(t) {
         st.tab = t;
+        $("#about").hidden = t !== "about";
+        $("#pbody").hidden = t === "about";
         document
           .querySelectorAll(".tabs button[data-tab]")
           .forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
@@ -2075,6 +2236,7 @@
         return { agg, notables, keystones, gateways };
       }
       function renderPanel() {
+        if (st.tab === "about") return;
         const body = $("#pbody");
         if (st.tab === "node") {
           const n = st.selected != null ? st.byId.get(st.selected) : null;
@@ -2359,6 +2521,7 @@
           await loadTree(/^#r1?-/.test(h) ? "ruthless" : "standard");
           if (W <= 760) showPanel(false);
           await loadFromHash();
+          setTab(location.hash.length > 1 ? "node" : "about");
           $("#undoBtn").disabled = true;
           changed(false);
           fit();
