@@ -1,951 +1,2374 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Atlas Passive Tree Planner — PoE1</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#07080a; --panel:#111214f2; --panel2:#17181b; --line:#2c2a25; --text:#d8d2c4; --dim:#8b8578;
-  --gold:#c8a65a; --gold2:#e9cf8a; --blue:#7fb6e0; --red:#d8665a; --notable:#e0c06a; --keystone:#e8a24a; --flav:#b4743c;
-}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 Inter,system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
-canvas#tree{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-canvas#tree.dragging{cursor:grabbing}
-canvas#tree.pointer{cursor:pointer}
-header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;
-  background:linear-gradient(#0b0c0ef5,#0b0c0ed0);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
-h1{font:700 15px Cinzel,serif;letter-spacing:.06em;color:var(--gold2);margin:0 6px 0 2px;white-space:nowrap}
-h1 small{font:500 11px Inter,sans-serif;color:var(--dim);letter-spacing:0;margin-left:6px}
-.grow{flex:1}
-select,input,button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid #37342d;border-radius:6px;padding:6px 10px;height:34px}
-select:focus,input:focus{outline:1px solid var(--gold);outline-offset:0}
-button{cursor:pointer;white-space:nowrap}
-button:hover{border-color:var(--gold);color:var(--gold2)}
-button.primary{background:linear-gradient(#5a4520,#3b2d14);border-color:#8a6a2c;color:var(--gold2)}
-button:disabled{opacity:.4;cursor:default;border-color:#37342d;color:var(--text)}
-#search{width:200px}
-.points{font:700 15px Cinzel,serif;color:var(--gold2);padding:0 8px;white-space:nowrap}
-.points.over{color:var(--red)}
-.points span{font:500 11px Inter,sans-serif;color:var(--dim);margin-left:3px}
-#matchinfo{font-size:12px;color:var(--dim);min-width:0}
-#panel{position:fixed;z-index:4;right:0;top:var(--hh,51px);bottom:0;width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;transition:transform .2s}
-#panel.hidden{transform:translateX(100%)}
-.tabs{display:flex;border-bottom:1px solid var(--line)}
-.tabs button{flex:1;border:0;border-radius:0;background:transparent;height:40px;color:var(--dim);font:600 12px Inter;letter-spacing:.08em;text-transform:uppercase}
-.tabs button.on{color:var(--gold2);box-shadow:inset 0 -2px var(--gold)}
-.tabs .x{flex:0 0 44px;font-size:18px}
-.pbody{overflow:auto;padding:14px 16px 24px;flex:1}
-.empty{color:var(--dim);font-size:13px}
-.nname{font:700 17px Cinzel,serif;margin:0 0 2px}
-.ntype{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
-.stat{color:#9fb6e8;margin:3px 0;white-space:pre-line}
-.rem{color:var(--dim);font-style:italic;font-size:12.5px;margin:6px 0;white-space:pre-line}
-.flav{color:var(--flav);font-style:italic;margin-top:10px;white-space:pre-line}
-.variant{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;margin:6px 0;border:1px solid #2f2c26;border-radius:6px;cursor:pointer}
-.variant.on{border-color:var(--gold);background:#2a2214}
-.variant input{margin-top:3px;accent-color:var(--gold);height:auto}
-.actions{display:flex;gap:8px;margin-top:14px}
-.sumh{font:700 12px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:16px 0 6px}
-.sumh:first-child{margin-top:0}
-.chip{display:inline-block;padding:3px 8px;margin:2px 4px 2px 0;border-radius:12px;background:#221d13;border:1px solid #4a3c20;font-size:12px;cursor:pointer}
-.chip.k{background:#2a1a0c;border-color:#7a4a1c;color:#f0c08a}
-.srow{display:flex;gap:8px;margin:3px 0;font-size:13px}
-.srow .stat{margin:0;flex:1}
-.srow .cnt{color:var(--dim);font-size:11px;padding-top:2px}
-#tip{position:fixed;z-index:6;pointer-events:none;max-width:340px;background:#0c0c0ef5;border:1px solid #4a4130;border-radius:6px;padding:10px 12px;box-shadow:0 6px 24px #000a;display:none}
-#tip .nname{font-size:15px}
-#tip .hint{margin-top:8px;font-size:12px;color:var(--dim);border-top:1px solid #2a2720;padding-top:6px}
-.hint b{color:var(--blue)} .hint b.r{color:var(--red)}
-dialog{background:#121315;color:var(--text);border:1px solid #4a4130;border-radius:10px;padding:0;width:min(560px,94vw);box-shadow:0 20px 60px #000c}
-dialog::backdrop{background:#000a}
-.dh{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
-.dh h2{font:700 15px Cinzel,serif;color:var(--gold2);margin:0;flex:1}
-.db{padding:14px 16px 18px}
-.db label{display:block;font-size:12px;color:var(--dim);margin:12px 0 4px}
-.db label:first-child{margin-top:0}
-.row{display:flex;gap:8px}
-.row input{flex:1;min-width:0}
-textarea{width:100%;min-height:70px;font:12px ui-monospace,monospace;color:var(--text);background:var(--panel2);border:1px solid #37342d;border-radius:6px;padding:8px;resize:vertical}
-.note{font-size:12px;color:var(--dim);margin-top:6px}
-.err{color:var(--red)}
-.ok{color:#8fd08f}
-.mrow{padding:10px 0;border-bottom:1px solid #24221d}
-.mtop{display:flex;align-items:center;gap:8px}
-.mname{flex:1;font-weight:600;color:var(--text)}
-.badge{font:700 10.5px Inter;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:4px;white-space:nowrap}
-.badge.g{background:#173a1f;color:#8fe39b;border:1px solid #2f7a3e}
-.badge.p{background:#2a2414;color:var(--gold2);border:1px solid #6a5426}
-.badge.i{background:#16222f;color:var(--blue);border:1px solid #2c4d6c}
-.mdet{font-size:12.5px;color:var(--dim);margin-top:4px}
-.mdet b{color:var(--text);font-weight:600}
-.bar{height:5px;background:#24221d;border-radius:3px;margin-top:6px;overflow:hidden;position:relative}
-.bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8a6a2c,#e9cf8a);border-radius:3px}
-.bar i.g{background:linear-gradient(90deg,#2f7a3e,#8fe39b)}
-.mlink{background:none;border:0;height:auto;padding:0;color:var(--gold);font-size:12px;cursor:pointer;margin-left:6px}
-.mlink:hover{color:var(--gold2)}
-.mnote{font-size:12px;color:var(--dim);background:#17181b;border:1px solid #2a2720;border-radius:6px;padding:8px 10px;margin-bottom:6px}
-.tipm{margin-top:6px;font-size:12px}
-.tipm div{margin:2px 0}
-.tipm .gg{color:#8fe39b}
-#spawnBtn .n{color:#8fe39b;font-weight:600}
-#toast{position:fixed;z-index:9;left:50%;bottom:24px;transform:translateX(-50%);background:#1d1a12;border:1px solid var(--gold);color:var(--gold2);padding:8px 14px;border-radius:8px;display:none}
-#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font:600 16px Cinzel,serif;color:var(--gold);z-index:10;background:var(--bg)}
-#zoom{position:fixed;z-index:3;left:12px;bottom:12px;display:flex;flex-direction:column;gap:6px}
-#zoom button{width:38px;height:38px;padding:0;font-size:18px;background:#111214e0}
-#panelToggle{display:none}
-.brk{display:none;flex-basis:100%;height:0}
-@media (max-width:760px){
-  header{gap:6px;padding:6px 8px}
-  h1 small{display:none}
-  header > *{order:5}
-  h1{order:0} #treeSel{order:1} #points{order:2} #spawnBtn{order:3} .brk{order:4;display:block} #shareBtn{order:3;margin-left:auto}
-  #search{width:auto;flex:1;min-width:0}
-  header button{padding:6px 9px}
-  .wide{display:none}
-  #panel{top:auto;left:0;width:auto;height:46vh;border-left:0;border-top:1px solid var(--line);border-radius:12px 12px 0 0}
-  #panel.hidden{transform:translateY(100%)}
-  #panelToggle{display:inline-block}
-}
-</style>
-</head>
-<body>
-<canvas id="tree"></canvas>
-<header>
-  <h1>Atlas Tree<small id="ver"></small></h1>
-  <select id="treeSel" title="Tree variant">
-    <option value="standard">Standard</option>
-    <option value="ruthless">Ruthless</option>
-  </select>
-  <div class="points" id="points">0<span>/ 150</span></div>
-  <input id="search" type="search" placeholder="Search nodes… (Enter to jump)" autocomplete="off">
-  <span id="matchinfo" class="wide"></span>
-  <div class="grow wide"></div>
-  <div class="brk"></div>
-  <button id="spawnBtn" title="Content the allocated nodes guarantee"><span class="n">✓ 0</span><span class="wide"> guaranteed</span></button>
-  <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
-  <button id="resetBtn">Reset</button>
-  <button id="panelToggle">Details</button>
-  <button id="shareBtn" class="primary">Share</button>
-</header>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>
+      PoE Atlas Passive Tree Planner – Plan & Share Atlas Trees | valdo.tools
+    </title>
+    <meta
+      name="description"
+      content="Free Path of Exile atlas passive tree planner. Allocate atlas points, see which league mechanics are guaranteed to spawn, and share your tree with a link. Standard and Ruthless."
+    />
+    <link rel="canonical" href="https://valdo.tools/atlas/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="valdo.tools" />
+    <meta property="og:title" content="PoE Atlas Passive Tree Planner" />
+    <meta
+      property="og:description"
+      content="Plan your atlas tree, check guaranteed league mechanics, and share it with one link."
+    />
+    <meta property="og:url" content="https://valdo.tools/atlas/" />
+    <meta property="og:image" content="https://valdo.tools/atlas/og.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "PoE Atlas Passive Tree Planner",
+        "url": "https://valdo.tools/atlas/",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "valdo.tools",
+          "url": "https://valdo.tools/"
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #07080a;
+        --panel: #111214f2;
+        --panel2: #17181b;
+        --line: #2c2a25;
+        --text: #d8d2c4;
+        --dim: #8b8578;
+        --gold: #c8a65a;
+        --gold2: #e9cf8a;
+        --blue: #7fb6e0;
+        --red: #d8665a;
+        --notable: #e0c06a;
+        --keystone: #e8a24a;
+        --flav: #b4743c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.4 Inter,
+          system-ui,
+          sans-serif;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      canvas#tree {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        cursor: grab;
+      }
+      canvas#tree.dragging {
+        cursor: grabbing;
+      }
+      canvas#tree.pointer {
+        cursor: pointer;
+      }
+      header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        background: linear-gradient(#0b0c0ef5, #0b0c0ed0);
+        border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(6px);
+      }
+      h1 {
+        font:
+          700 15px Cinzel,
+          serif;
+        letter-spacing: 0.06em;
+        color: var(--gold2);
+        margin: 0 6px 0 2px;
+        white-space: nowrap;
+      }
+      h1 small {
+        font:
+          500 11px Inter,
+          sans-serif;
+        color: var(--dim);
+        letter-spacing: 0;
+        margin-left: 6px;
+      }
+      .grow {
+        flex: 1;
+      }
+      select,
+      input,
+      button {
+        font: inherit;
+        color: var(--text);
+        background: var(--panel2);
+        border: 1px solid #37342d;
+        border-radius: 6px;
+        padding: 6px 10px;
+        height: 34px;
+      }
+      select:focus,
+      input:focus {
+        outline: 1px solid var(--gold);
+        outline-offset: 0;
+      }
+      button {
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:hover {
+        border-color: var(--gold);
+        color: var(--gold2);
+      }
+      button.primary {
+        background: linear-gradient(#5a4520, #3b2d14);
+        border-color: #8a6a2c;
+        color: var(--gold2);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+        border-color: #37342d;
+        color: var(--text);
+      }
+      #search {
+        width: 200px;
+      }
+      .points {
+        font:
+          700 15px Cinzel,
+          serif;
+        color: var(--gold2);
+        padding: 0 8px;
+        white-space: nowrap;
+      }
+      .points.over {
+        color: var(--red);
+      }
+      .points span {
+        font:
+          500 11px Inter,
+          sans-serif;
+        color: var(--dim);
+        margin-left: 3px;
+      }
+      #matchinfo {
+        font-size: 12px;
+        color: var(--dim);
+        min-width: 0;
+      }
+      #panel {
+        position: fixed;
+        z-index: 4;
+        right: 0;
+        top: var(--hh, 51px);
+        bottom: 0;
+        width: 340px;
+        background: var(--panel);
+        border-left: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s;
+      }
+      #panel.hidden {
+        transform: translateX(100%);
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--line);
+      }
+      .tabs button {
+        flex: 1;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        height: 40px;
+        color: var(--dim);
+        font: 600 12px Inter;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .tabs button.on {
+        color: var(--gold2);
+        box-shadow: inset 0 -2px var(--gold);
+      }
+      .tabs .x {
+        flex: 0 0 44px;
+        font-size: 18px;
+      }
+      .pbody {
+        overflow: auto;
+        padding: 14px 16px 24px;
+        flex: 1;
+      }
+      .empty {
+        color: var(--dim);
+        font-size: 13px;
+      }
+      .nname {
+        font:
+          700 17px Cinzel,
+          serif;
+        margin: 0 0 2px;
+      }
+      .ntype {
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin-bottom: 10px;
+      }
+      .stat {
+        color: #9fb6e8;
+        margin: 3px 0;
+        white-space: pre-line;
+      }
+      .rem {
+        color: var(--dim);
+        font-style: italic;
+        font-size: 12.5px;
+        margin: 6px 0;
+        white-space: pre-line;
+      }
+      .flav {
+        color: var(--flav);
+        font-style: italic;
+        margin-top: 10px;
+        white-space: pre-line;
+      }
+      .variant {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 8px 10px;
+        margin: 6px 0;
+        border: 1px solid #2f2c26;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .variant.on {
+        border-color: var(--gold);
+        background: #2a2214;
+      }
+      .variant input {
+        margin-top: 3px;
+        accent-color: var(--gold);
+        height: auto;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .sumh {
+        font: 700 12px Inter;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin: 16px 0 6px;
+      }
+      .sumh:first-child {
+        margin-top: 0;
+      }
+      .chip {
+        display: inline-block;
+        padding: 3px 8px;
+        margin: 2px 4px 2px 0;
+        border-radius: 12px;
+        background: #221d13;
+        border: 1px solid #4a3c20;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .chip.k {
+        background: #2a1a0c;
+        border-color: #7a4a1c;
+        color: #f0c08a;
+      }
+      .srow {
+        display: flex;
+        gap: 8px;
+        margin: 3px 0;
+        font-size: 13px;
+      }
+      .srow .stat {
+        margin: 0;
+        flex: 1;
+      }
+      .srow .cnt {
+        color: var(--dim);
+        font-size: 11px;
+        padding-top: 2px;
+      }
+      #tip {
+        position: fixed;
+        z-index: 6;
+        pointer-events: none;
+        max-width: 340px;
+        background: #0c0c0ef5;
+        border: 1px solid #4a4130;
+        border-radius: 6px;
+        padding: 10px 12px;
+        box-shadow: 0 6px 24px #000a;
+        display: none;
+      }
+      #tip .nname {
+        font-size: 15px;
+      }
+      #tip .hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--dim);
+        border-top: 1px solid #2a2720;
+        padding-top: 6px;
+      }
+      .hint b {
+        color: var(--blue);
+      }
+      .hint b.r {
+        color: var(--red);
+      }
+      dialog {
+        background: #121315;
+        color: var(--text);
+        border: 1px solid #4a4130;
+        border-radius: 10px;
+        padding: 0;
+        width: min(560px, 94vw);
+        box-shadow: 0 20px 60px #000c;
+      }
+      dialog::backdrop {
+        background: #000a;
+      }
+      .dh {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .dh h2 {
+        font:
+          700 15px Cinzel,
+          serif;
+        color: var(--gold2);
+        margin: 0;
+        flex: 1;
+      }
+      .db {
+        padding: 14px 16px 18px;
+      }
+      .db label {
+        display: block;
+        font-size: 12px;
+        color: var(--dim);
+        margin: 12px 0 4px;
+      }
+      .db label:first-child {
+        margin-top: 0;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row input {
+        flex: 1;
+        min-width: 0;
+      }
+      textarea {
+        width: 100%;
+        min-height: 70px;
+        font:
+          12px ui-monospace,
+          monospace;
+        color: var(--text);
+        background: var(--panel2);
+        border: 1px solid #37342d;
+        border-radius: 6px;
+        padding: 8px;
+        resize: vertical;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 6px;
+      }
+      .err {
+        color: var(--red);
+      }
+      .ok {
+        color: #8fd08f;
+      }
+      .mrow {
+        padding: 10px 0;
+        border-bottom: 1px solid #24221d;
+      }
+      .mtop {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .mname {
+        flex: 1;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .badge {
+        font: 700 10.5px Inter;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 7px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      .badge.g {
+        background: #173a1f;
+        color: #8fe39b;
+        border: 1px solid #2f7a3e;
+      }
+      .badge.p {
+        background: #2a2414;
+        color: var(--gold2);
+        border: 1px solid #6a5426;
+      }
+      .badge.i {
+        background: #16222f;
+        color: var(--blue);
+        border: 1px solid #2c4d6c;
+      }
+      .mdet {
+        font-size: 12.5px;
+        color: var(--dim);
+        margin-top: 4px;
+      }
+      .mdet b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .bar {
+        height: 5px;
+        background: #24221d;
+        border-radius: 3px;
+        margin-top: 6px;
+        overflow: hidden;
+        position: relative;
+      }
+      .bar i {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, #8a6a2c, #e9cf8a);
+        border-radius: 3px;
+      }
+      .bar i.g {
+        background: linear-gradient(90deg, #2f7a3e, #8fe39b);
+      }
+      .mlink {
+        background: none;
+        border: 0;
+        height: auto;
+        padding: 0;
+        color: var(--gold);
+        font-size: 12px;
+        cursor: pointer;
+        margin-left: 6px;
+      }
+      .mlink:hover {
+        color: var(--gold2);
+      }
+      .mnote {
+        font-size: 12px;
+        color: var(--dim);
+        background: #17181b;
+        border: 1px solid #2a2720;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+      }
+      .tipm {
+        margin-top: 6px;
+        font-size: 12px;
+      }
+      .tipm div {
+        margin: 2px 0;
+      }
+      .tipm .gg {
+        color: #8fe39b;
+      }
+      #spawnBtn .n {
+        color: #8fe39b;
+        font-weight: 600;
+      }
+      #toast {
+        position: fixed;
+        z-index: 9;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        background: #1d1a12;
+        border: 1px solid var(--gold);
+        color: var(--gold2);
+        padding: 8px 14px;
+        border-radius: 8px;
+        display: none;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font:
+          600 16px Cinzel,
+          serif;
+        color: var(--gold);
+        z-index: 10;
+        background: var(--bg);
+      }
+      #zoom {
+        position: fixed;
+        z-index: 3;
+        left: 12px;
+        bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #zoom button {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        font-size: 18px;
+        background: #111214e0;
+      }
+      #panelToggle {
+        display: none;
+      }
+      .brk {
+        display: none;
+        flex-basis: 100%;
+        height: 0;
+      }
+      @media (max-width: 760px) {
+        header {
+          gap: 6px;
+          padding: 6px 8px;
+        }
+        h1 small {
+          display: none;
+        }
+        header > * {
+          order: 5;
+        }
+        h1 {
+          order: 0;
+        }
+        #treeSel {
+          order: 1;
+        }
+        #points {
+          order: 2;
+        }
+        #spawnBtn {
+          order: 3;
+        }
+        .brk {
+          order: 4;
+          display: block;
+        }
+        #shareBtn {
+          order: 3;
+          margin-left: auto;
+        }
+        #search {
+          width: auto;
+          flex: 1;
+          min-width: 0;
+        }
+        header button {
+          padding: 6px 9px;
+        }
+        .wide {
+          display: none;
+        }
+        #panel {
+          top: auto;
+          left: 0;
+          width: auto;
+          height: 46vh;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+          border-radius: 12px 12px 0 0;
+        }
+        #panel.hidden {
+          transform: translateY(100%);
+        }
+        #panelToggle {
+          display: inline-block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="tree"></canvas>
+    <header>
+      <h1>Atlas Tree<small id="ver"></small></h1>
+      <select id="treeSel" title="Tree variant">
+        <option value="standard">Standard</option>
+        <option value="ruthless">Ruthless</option>
+      </select>
+      <div class="points" id="points">0<span>/ 150</span></div>
+      <input
+        id="search"
+        type="search"
+        placeholder="Search nodes… (Enter to jump)"
+        autocomplete="off"
+      />
+      <span id="matchinfo" class="wide"></span>
+      <div class="grow wide"></div>
+      <div class="brk"></div>
+      <button id="spawnBtn" title="Content the allocated nodes guarantee">
+        <span class="n">✓ 0</span><span class="wide"> guaranteed</span>
+      </button>
+      <button id="undoBtn" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="resetBtn">Reset</button>
+      <button id="panelToggle">Details</button>
+      <button id="shareBtn" class="primary">Share</button>
+    </header>
 
-<aside id="panel">
-  <div class="tabs">
-    <button data-tab="node" class="on">Node</button>
-    <button data-tab="spawns">Spawns</button>
-    <button data-tab="summary">Summary</button>
-    <button class="x" id="closePanel" title="Hide panel">×</button>
-  </div>
-  <div class="pbody" id="pbody"></div>
-</aside>
+    <aside id="panel">
+      <div class="tabs">
+        <button data-tab="node" class="on">Node</button>
+        <button data-tab="spawns">Spawns</button>
+        <button data-tab="summary">Summary</button>
+        <button class="x" id="closePanel" title="Hide panel">×</button>
+      </div>
+      <div class="pbody" id="pbody"></div>
+    </aside>
 
-<div id="zoom">
-  <button id="zin" title="Zoom in">+</button>
-  <button id="zout" title="Zoom out">−</button>
-  <button id="zfit" title="Fit tree">⤢</button>
-</div>
+    <div id="zoom">
+      <button id="zin" title="Zoom in">+</button>
+      <button id="zout" title="Zoom out">−</button>
+      <button id="zfit" title="Fit tree">⤢</button>
+    </div>
 
-<div id="tip"></div>
-<div id="toast"></div>
-<div id="loading">Loading atlas…</div>
+    <div id="tip"></div>
+    <div id="toast"></div>
+    <div id="loading">Loading atlas…</div>
 
-<dialog id="shareDlg">
-  <div class="dh"><h2>Share &amp; import</h2><button id="dlgClose">Close</button></div>
-  <div class="db">
-    <label>Short link</label>
-    <div class="row"><input id="shareLink" readonly><button id="copyLink" class="primary">Copy</button></div>
-    <div class="note">Anyone opening this link sees exactly your allocations (and chosen variant effects). The page's address also updates as you allocate.</div>
-    <label>Long link <span style="opacity:.7">— keeps working after future tree updates</span></label>
-    <div class="row"><input id="longLink" readonly><button id="copyLong">Copy</button></div>
-    <label>pathofexile.com tree code</label>
-    <div class="row"><input id="officialCode" readonly><button id="copyOfficial">Copy</button></div>
-    <div class="note" id="officialNote"></div>
-    <label>Import a tree</label>
-    <textarea id="importText" placeholder="Paste a link from this planner, a pathofexile.com atlas tree URL, or a tree code"></textarea>
-    <div class="row" style="margin-top:8px"><button id="importBtn" class="primary">Import</button><span id="importMsg" class="note" style="align-self:center"></span></div>
-  </div>
-</dialog>
+    <dialog id="shareDlg">
+      <div class="dh">
+        <h2>Share &amp; import</h2>
+        <button id="dlgClose">Close</button>
+      </div>
+      <div class="db">
+        <label>Short link</label>
+        <div class="row">
+          <input id="shareLink" readonly /><button
+            id="copyLink"
+            class="primary"
+          >
+            Copy
+          </button>
+        </div>
+        <div class="note">
+          Anyone opening this link sees exactly your allocations (and chosen
+          variant effects). The page's address also updates as you allocate.
+        </div>
+        <label
+          >Long link
+          <span style="opacity: 0.7"
+            >— keeps working after future tree updates</span
+          ></label
+        >
+        <div class="row">
+          <input id="longLink" readonly /><button id="copyLong">Copy</button>
+        </div>
+        <label>pathofexile.com tree code</label>
+        <div class="row">
+          <input id="officialCode" readonly /><button id="copyOfficial">
+            Copy
+          </button>
+        </div>
+        <div class="note" id="officialNote"></div>
+        <label>Import a tree</label>
+        <textarea
+          id="importText"
+          placeholder="Paste a link from this planner, a pathofexile.com atlas tree URL, or a tree code"
+        ></textarea>
+        <div class="row" style="margin-top: 8px">
+          <button id="importBtn" class="primary">Import</button
+          ><span id="importMsg" class="note" style="align-self: center"></span>
+        </div>
+      </div>
+    </dialog>
 
-<script>
-"use strict";
-// Set after publishing so in-app share links point at the hosted page rather than the sandbox frame.
-const ARTIFACT_URL = "";
-const START_ID = 29045;
-const SPRITE_SCALE = 2; // sprite sheets are the 0.5 zoom level
-const TYPE_LABEL = {normal:"Passive", notable:"Notable", keystone:"Keystone", wormhole:"Gateway", start:"Start", mastery:"Mastery"};
-const TYPE_COLOR = {normal:"#d8d2c4", notable:"#e0c06a", keystone:"#e8a24a", wormhole:"#a6c8ff", mastery:"#c8a65a", start:"#d8d2c4"};
-const HIT_R = {normal:42, notable:62, keystone:90, wormhole:110};
-const FRAME = {
-  normal:   {u:"PSSkillFrame", c:"PSSkillFrameHighlighted", a:"PSSkillFrameActive"},
-  notable:  {u:"NotableFrameUnallocated", c:"NotableFrameCanAllocate", a:"NotableFrameAllocated"},
-  keystone: {u:"KeystoneFrameUnallocated", c:"KeystoneFrameCanAllocate", a:"KeystoneFrameAllocated"},
-  wormhole: {u:"WormholeFrameUnallocated", c:"WormholeFrameCanAllocate", a:"WormholeFrameAllocated"},
-};
+    <script>
+      "use strict";
+      // Set after publishing so in-app share links point at the hosted page rather than the sandbox frame.
+      const ARTIFACT_URL = "";
+      const START_ID = 29045;
+      const SPRITE_SCALE = 2; // sprite sheets are the 0.5 zoom level
+      const TYPE_LABEL = {
+        normal: "Passive",
+        notable: "Notable",
+        keystone: "Keystone",
+        wormhole: "Gateway",
+        start: "Start",
+        mastery: "Mastery",
+      };
+      const TYPE_COLOR = {
+        normal: "#d8d2c4",
+        notable: "#e0c06a",
+        keystone: "#e8a24a",
+        wormhole: "#a6c8ff",
+        mastery: "#c8a65a",
+        start: "#d8d2c4",
+      };
+      const HIT_R = { normal: 42, notable: 62, keystone: 90, wormhole: 110 };
+      const FRAME = {
+        normal: {
+          u: "PSSkillFrame",
+          c: "PSSkillFrameHighlighted",
+          a: "PSSkillFrameActive",
+        },
+        notable: {
+          u: "NotableFrameUnallocated",
+          c: "NotableFrameCanAllocate",
+          a: "NotableFrameAllocated",
+        },
+        keystone: {
+          u: "KeystoneFrameUnallocated",
+          c: "KeystoneFrameCanAllocate",
+          a: "KeystoneFrameAllocated",
+        },
+        wormhole: {
+          u: "WormholeFrameUnallocated",
+          c: "WormholeFrameCanAllocate",
+          a: "WormholeFrameAllocated",
+        },
+      };
 
-const $ = s => document.querySelector(s);
-const canvas = $("#tree"), ctx = canvas.getContext("2d");
-let W = 0, H = 0, DPR = 1;
-const cam = {x:0, y:0, s:0.05};
-let sprites = null; const images = {};
-const treeCache = {};
-const st = {
-  key:"standard", tree:null, byId:new Map(), adj:new Map(), groupNodes:new Map(),
-  alloc:new Set([START_ID]), variants:new Map(),
-  hover:null, selected:null, addPath:new Set(), removeSet:new Set(),
-  matches:[], matchSet:new Set(), matchIdx:-1, history:[], tab:"node"
-};
-let dirty = true;
-const redraw = () => { dirty = true; };
+      const $ = (s) => document.querySelector(s);
+      const canvas = $("#tree"),
+        ctx = canvas.getContext("2d");
+      let W = 0,
+        H = 0,
+        DPR = 1;
+      const cam = { x: 0, y: 0, s: 0.05 };
+      let sprites = null;
+      const images = {};
+      const treeCache = {};
+      const st = {
+        key: "standard",
+        tree: null,
+        byId: new Map(),
+        adj: new Map(),
+        groupNodes: new Map(),
+        alloc: new Set([START_ID]),
+        variants: new Map(),
+        hover: null,
+        selected: null,
+        addPath: new Set(),
+        removeSet: new Set(),
+        matches: [],
+        matchSet: new Set(),
+        matchIdx: -1,
+        history: [],
+        tab: "node",
+      };
+      let dirty = true;
+      const redraw = () => {
+        dirty = true;
+      };
 
-/* ---------- loading ---------- */
-function loadImg(src){ return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("image " + src)); i.src = src; }); }
-async function loadSprites(){
-  sprites = await (await fetch("sprites.json")).json();
-  const files = new Set(Object.values(sprites).map(s => s.file));
-  await Promise.all([...files].map(async f => { images[f] = await loadImg(f); }));
-  bgPattern = ctx.createPattern(images[sprites.background.file], "repeat");
-}
-let bgPattern = null;
-async function loadTree(key){
-  if (!treeCache[key]) treeCache[key] = await (await fetch(`tree-${key}.json`)).json();
-  const t = treeCache[key];
-  st.key = key; st.tree = t; st.byId = new Map(); st.adj = new Map(); st.groupNodes = new Map();
-  for (const n of t.nodes){
-    st.byId.set(n.id, n);
-    if (n.t !== "mastery") st.adj.set(n.id, []);
-    if (!st.groupNodes.has(n.g)) st.groupNodes.set(n.g, []);
-    st.groupNodes.get(n.g).push(n);
-  }
-  for (const e of t.edges){
-    if (!st.adj.has(e.a) || !st.adj.has(e.b)) continue;
-    st.adj.get(e.a).push(e.b); st.adj.get(e.b).push(e.a);
-    if (e.c){ // precompute arc geometry
-      const A = st.byId.get(e.a), B = st.byId.get(e.b);
-      const r = Math.hypot(A.x - e.c[0], A.y - e.c[1]);
-      let a1 = Math.atan2(A.y - e.c[1], A.x - e.c[0]), a2 = Math.atan2(B.y - e.c[1], B.x - e.c[0]);
-      let d = a2 - a1; while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI;
-      e.arc = {r, a1, a2: a1 + d, ccw: d < 0};
-    }
-  }
-  indexMechanics();
-  for (const list of st.adj.values()) list.sort((a, b) => a - b);
-  $("#ver").textContent = t.version === "Atlas" ? "PoE1 · 3.30 data" : t.version;
-  $("#treeSel").value = key;
-}
+      /* ---------- loading ---------- */
+      function loadImg(src) {
+        return new Promise((res, rej) => {
+          const i = new Image();
+          i.onload = () => res(i);
+          i.onerror = () => rej(new Error("image " + src));
+          i.src = src;
+        });
+      }
+      async function loadSprites() {
+        sprites = await (await fetch("sprites.json")).json();
+        const files = new Set(Object.values(sprites).map((s) => s.file));
+        await Promise.all(
+          [...files].map(async (f) => {
+            images[f] = await loadImg(f);
+          }),
+        );
+        bgPattern = ctx.createPattern(
+          images[sprites.background.file],
+          "repeat",
+        );
+      }
+      let bgPattern = null;
+      async function loadTree(key) {
+        if (!treeCache[key])
+          treeCache[key] = await (await fetch(`tree-${key}.json`)).json();
+        const t = treeCache[key];
+        st.key = key;
+        st.tree = t;
+        st.byId = new Map();
+        st.adj = new Map();
+        st.groupNodes = new Map();
+        for (const n of t.nodes) {
+          st.byId.set(n.id, n);
+          if (n.t !== "mastery") st.adj.set(n.id, []);
+          if (!st.groupNodes.has(n.g)) st.groupNodes.set(n.g, []);
+          st.groupNodes.get(n.g).push(n);
+        }
+        for (const e of t.edges) {
+          if (!st.adj.has(e.a) || !st.adj.has(e.b)) continue;
+          st.adj.get(e.a).push(e.b);
+          st.adj.get(e.b).push(e.a);
+          if (e.c) {
+            // precompute arc geometry
+            const A = st.byId.get(e.a),
+              B = st.byId.get(e.b);
+            const r = Math.hypot(A.x - e.c[0], A.y - e.c[1]);
+            let a1 = Math.atan2(A.y - e.c[1], A.x - e.c[0]),
+              a2 = Math.atan2(B.y - e.c[1], B.x - e.c[0]);
+            let d = a2 - a1;
+            while (d > Math.PI) d -= 2 * Math.PI;
+            while (d < -Math.PI) d += 2 * Math.PI;
+            e.arc = { r, a1, a2: a1 + d, ccw: d < 0 };
+          }
+        }
+        indexMechanics();
+        for (const list of st.adj.values()) list.sort((a, b) => a - b);
+        $("#ver").textContent =
+          t.version === "Atlas" ? "PoE1 · 3.30 data" : t.version;
+        $("#treeSel").value = key;
+      }
 
-/* ---------- graph logic ---------- */
-function pathTo(target){
-  if (st.alloc.has(target) || !st.adj.has(target)) return [];
-  const prev = new Map(); const q = [];
-  for (const id of st.alloc){ prev.set(id, null); q.push(id); }
-  for (let qi = 0; qi < q.length; qi++){
-    const cur = q[qi];
-    if (cur === target) break;
-    for (const nb of st.adj.get(cur) || []){
-      if (prev.has(nb)) continue;
-      prev.set(nb, cur); q.push(nb);
-    }
-  }
-  if (!prev.has(target)) return [];
-  const path = []; let c = target;
-  while (c != null && !st.alloc.has(c)){ path.push(c); c = prev.get(c); }
-  return path;
-}
-function reachable(set){
-  const seen = new Set([START_ID]); const q = [START_ID];
-  for (let i = 0; i < q.length; i++) for (const nb of st.adj.get(q[i]) || []) if (set.has(nb) && !seen.has(nb)){ seen.add(nb); q.push(nb); }
-  return seen;
-}
-function removalFor(id){
-  if (!st.alloc.has(id) || id === START_ID) return new Set();
-  const rest = new Set(st.alloc); rest.delete(id);
-  const keep = reachable(rest);
-  const out = new Set([id]);
-  for (const a of rest) if (!keep.has(a)) out.add(a);
-  return out;
-}
-function snapshot(){ st.history.push({a:[...st.alloc], v:[...st.variants]}); if (st.history.length > 200) st.history.shift(); $("#undoBtn").disabled = false; }
-function toggle(id){
-  const n = st.byId.get(id); if (!n || n.t === "mastery" || n.t === "start") return;
-  snapshot();
-  if (st.alloc.has(id)){
-    for (const r of removalFor(id)){ st.alloc.delete(r); st.variants.delete(r); }
-  } else {
-    const p = pathTo(id); if (!p.length){ st.history.pop(); return; }
-    for (const x of p){ st.alloc.add(x); const pn = st.byId.get(x); if (pn.v && !st.variants.has(x)) st.variants.set(x, 0); }
-  }
-  changed();
-}
-function changed(announce = true){ refreshPreview(); updatePoints(); updateMechanics(announce); writeHash(); renderPanel(); redraw(); }
-function undo(){
-  const h = st.history.pop(); if (!h) return;
-  st.alloc = new Set(h.a); st.variants = new Map(h.v);
-  $("#undoBtn").disabled = !st.history.length; changed();
-}
-function reset(){ if (st.alloc.size <= 1) return; snapshot(); st.alloc = new Set([START_ID]); st.variants.clear(); changed(); }
-function used(){ return st.alloc.size - 1; }
-function updatePoints(){
-  const el = $("#points"), u = used(), tot = st.tree.points;
-  el.innerHTML = `${u}<span>/ ${tot}</span>`; el.classList.toggle("over", u > tot);
-  el.title = u > tot ? `${u - tot} points over the ${tot} available` : `${tot - u} points left`;
-}
-function refreshPreview(){
-  st.addPath = new Set(); st.removeSet = new Set();
-  const id = st.hover ?? (touchMode ? st.selected : null);
-  if (id == null) return;
-  if (st.alloc.has(id)) st.removeSet = removalFor(id); else st.addPath = new Set(pathTo(id));
-}
+      /* ---------- graph logic ---------- */
+      function pathTo(target) {
+        if (st.alloc.has(target) || !st.adj.has(target)) return [];
+        const prev = new Map();
+        const q = [];
+        for (const id of st.alloc) {
+          prev.set(id, null);
+          q.push(id);
+        }
+        for (let qi = 0; qi < q.length; qi++) {
+          const cur = q[qi];
+          if (cur === target) break;
+          for (const nb of st.adj.get(cur) || []) {
+            if (prev.has(nb)) continue;
+            prev.set(nb, cur);
+            q.push(nb);
+          }
+        }
+        if (!prev.has(target)) return [];
+        const path = [];
+        let c = target;
+        while (c != null && !st.alloc.has(c)) {
+          path.push(c);
+          c = prev.get(c);
+        }
+        return path;
+      }
+      function reachable(set) {
+        const seen = new Set([START_ID]);
+        const q = [START_ID];
+        for (let i = 0; i < q.length; i++)
+          for (const nb of st.adj.get(q[i]) || [])
+            if (set.has(nb) && !seen.has(nb)) {
+              seen.add(nb);
+              q.push(nb);
+            }
+        return seen;
+      }
+      function removalFor(id) {
+        if (!st.alloc.has(id) || id === START_ID) return new Set();
+        const rest = new Set(st.alloc);
+        rest.delete(id);
+        const keep = reachable(rest);
+        const out = new Set([id]);
+        for (const a of rest) if (!keep.has(a)) out.add(a);
+        return out;
+      }
+      function snapshot() {
+        st.history.push({ a: [...st.alloc], v: [...st.variants] });
+        if (st.history.length > 200) st.history.shift();
+        $("#undoBtn").disabled = false;
+      }
+      function toggle(id) {
+        const n = st.byId.get(id);
+        if (!n || n.t === "mastery" || n.t === "start") return;
+        snapshot();
+        if (st.alloc.has(id)) {
+          for (const r of removalFor(id)) {
+            st.alloc.delete(r);
+            st.variants.delete(r);
+          }
+        } else {
+          const p = pathTo(id);
+          if (!p.length) {
+            st.history.pop();
+            return;
+          }
+          for (const x of p) {
+            st.alloc.add(x);
+            const pn = st.byId.get(x);
+            if (pn.v && !st.variants.has(x)) st.variants.set(x, 0);
+          }
+        }
+        changed();
+      }
+      function changed(announce = true) {
+        refreshPreview();
+        updatePoints();
+        updateMechanics(announce);
+        writeHash();
+        renderPanel();
+        redraw();
+      }
+      function undo() {
+        const h = st.history.pop();
+        if (!h) return;
+        st.alloc = new Set(h.a);
+        st.variants = new Map(h.v);
+        $("#undoBtn").disabled = !st.history.length;
+        changed();
+      }
+      function reset() {
+        if (st.alloc.size <= 1) return;
+        snapshot();
+        st.alloc = new Set([START_ID]);
+        st.variants.clear();
+        changed();
+      }
+      function used() {
+        return st.alloc.size - 1;
+      }
+      function updatePoints() {
+        const el = $("#points"),
+          u = used(),
+          tot = st.tree.points;
+        el.innerHTML = `${u}<span>/ ${tot}</span>`;
+        el.classList.toggle("over", u > tot);
+        el.title =
+          u > tot
+            ? `${u - tot} points over the ${tot} available`
+            : `${tot - u} points left`;
+      }
+      function refreshPreview() {
+        st.addPath = new Set();
+        st.removeSet = new Set();
+        const id = st.hover ?? (touchMode ? st.selected : null);
+        if (id == null) return;
+        if (st.alloc.has(id)) st.removeSet = removalFor(id);
+        else st.addPath = new Set(pathTo(id));
+      }
 
-/* ---------- league mechanic spawn chances ---------- */
-const MECH_LABEL = {
-  "sacred flora":"Harvest (Sacred Flora)", "rogue exile":"Rogue Exiles", "shrine":"Shrines", "strongbox":"Strongboxes",
-  "imprisoned monster":"Essences (Imprisoned Monsters)", "ore deposits":"Ore Deposits", "multiple ore deposits":"Multiple Ore Deposits",
-  "trial of ascendancy":"Labyrinth Trial", "tormented spirit":"Tormented Spirits", "mercenary":"Mercenaries",
-  "mirror of delirium":"Delirium (Mirror)", "demonic evocator":"Beyond (Demonic Evocator)", "viridian wildwood":"Viridian Wildwood",
-  "mirage":"Mirage", "buried sentinel":"Buried Sentinel", "atlas anomalies":"Atlas Anomalies",
-  "certain tormented spirits":"Specific Tormented Spirits", "packs with mirrored rare monsters":"Mirrored Rare packs",
-  "packs of divination-touched magic monsters":"Divination-Touched packs", "pack of incursion monsters":"Incursion packs",
-  "apparition shrine":"Apparition Shrine", "memory tears (tier 16+)":"Memory Tears (T16+)"
-};
-const NUM = "(\\d+(?:\\.\\d+)?)", TO = "to (?:contain|be haunted by|be inhabited by)";
-const MECH_RULES = [
-  {kind:"surpass", re:new RegExp(`^Your Maps have \\+?${NUM}% Surpassing Chance ${TO} (.+)$`, "i")},
-  {kind:"flat",    re:new RegExp(`^Your Maps have \\+${NUM}% chance ${TO} (.+)$`, "i")},
-  {kind:"inc",     re:new RegExp(`^Your Maps have ${NUM}% increased chance ${TO} (.+)$`, "i")},
-  {kind:"inc",     re:new RegExp(`^${NUM}% increased chance for your Maps to contain (.+)$`, "i")},
-  {kind:"inc",     re:new RegExp(`^${NUM}% increased chance for (Atlas Anomalies) to manifest in your Maps$`, "i")},
-  {kind:"extra",   re:/^Your Maps (?:contains?|are inhabited by) (an|a|\d+) additional (.+)$/i},
-];
-function mechKey(t){ return t.trim().replace(/^(an?|the) /i, "").replace(/\.$/, "").toLowerCase(); }
-function mechLabel(k){ return MECH_LABEL[k] || k.replace(/(^|\s)\S/g, c => c.toUpperCase()); }
-function parseMech(lines){
-  const out = [];
-  for (const raw of lines || []){
-    const line = raw.replace(/\s*\n\s*/g, " ").trim();
-    for (const r of MECH_RULES){
-      const m = line.match(r.re); if (!m) continue;
-      const val = r.kind === "extra" ? (/^\d+$/.test(m[1]) ? +m[1] : 1) : +m[1];
-      out.push({key:mechKey(m[2]), kind:r.kind, val}); break;
-    }
-  }
-  return out;
-}
-function indexMechanics(){
-  st.mechNodes = new Map();
-  for (const n of st.tree.nodes){
-    n.mech = parseMech(n.s);
-    n.vmech = n.v ? n.v.map(v => parseMech(v.s)) : null;
-    const keys = new Set([...n.mech, ...(n.vmech || []).flat()].map(m => m.key));
-    for (const k of keys){ if (!st.mechNodes.has(k)) st.mechNodes.set(k, []); st.mechNodes.get(k).push(n); }
-  }
-}
-function mechStats(set, variants = st.variants){
-  const res = new Map();
-  for (const k of st.mechNodes.keys()) res.set(k, {key:k, surpass:0, flat:0, inc:0, extra:0, n:0});
-  for (const id of set){
-    const n = st.byId.get(id); if (!n) continue;
-    const list = n.vmech ? n.mech.concat(n.vmech[variants.get(id) ?? 0] || []) : n.mech;
-    for (const m of list){ const r = res.get(m.key); r[m.kind] += m.val; r.n++; }
-  }
-  for (const r of res.values()){
-    r.chance = r.surpass + r.flat;
-    r.count = r.extra + (r.surpass ? Math.floor(r.chance / 100) : r.flat >= 100 ? 1 : 0);
-    r.rem = r.surpass ? +(r.chance % 100).toFixed(2) : r.flat >= 100 ? 0 : r.chance;
-    r.guaranteed = r.count > 0;
-  }
-  return res;
-}
-function mechLine(r){
-  if (r.guaranteed){
-    if (r.surpass || r.extra) return `${r.count} guaranteed` + (r.rem ? ` + ${fmtNum(r.rem)}% for another` : "");
-    return "Guaranteed";
-  }
-  if (r.chance) return `${fmtNum(r.chance)}% from tree`;
-  if (r.inc) return `+${fmtNum(r.inc)}% increased`;
-  return "0%";
-}
-function guaranteedKeys(set){ return new Set([...mechStats(set).values()].filter(r => r.guaranteed).map(r => r.key)); }
-let lastGuaranteed = new Set();
-function updateMechanics(announce){
-  const now = guaranteedKeys(st.alloc);
-  $("#spawnBtn .n").textContent = "✓ " + now.size;
-  if (announce){
-    const gained = [...now].filter(k => !lastGuaranteed.has(k)), lost = [...lastGuaranteed].filter(k => !now.has(k));
-    if (gained.length) toast(`Now guaranteed: ${gained.map(mechLabel).join(", ")}`);
-    else if (lost.length) toast(`No longer guaranteed: ${lost.map(mechLabel).join(", ")}`);
-  }
-  lastGuaranteed = now;
-}
-function mechDiffHTML(n){
-  if (!st.mechNodes) return "";
-  let after;
-  if (st.alloc.has(n.id)){ const rm = removalFor(n.id); after = new Set([...st.alloc].filter(i => !rm.has(i))); }
-  else { const p = pathTo(n.id); if (!p.length) return ""; after = new Set([...st.alloc, ...p]); }
-  const vars = new Map(st.variants);
-  for (const id of after) if (st.byId.get(id).v && !vars.has(id)) vars.set(id, 0);
-  const a = mechStats(st.alloc), b = mechStats(after, vars);
-  const rows = [];
-  for (const [k, rb] of b){
-    const ra = a.get(k);
-    if (ra.chance === rb.chance && ra.inc === rb.inc && ra.extra === rb.extra) continue;
-    const flip = rb.guaranteed !== ra.guaranteed;
-    rows.push(`<div class="${rb.guaranteed ? "gg" : ""}">${esc(mechLabel(k))}: ${mechLine(ra)} → <b>${mechLine(rb)}</b>${flip ? (rb.guaranteed ? " ✓" : " ✗") : ""}</div>`);
-  }
-  return rows.length ? `<div class="tipm">${rows.slice(0, 5).join("")}</div>` : "";
-}
-function highlightNodes(list, label){
-  st.matches = list; st.matchSet = new Set(list.map(n => n.id)); st.matchIdx = -1;
-  $("#search").value = ""; $("#matchinfo").textContent = `${label}: ${list.length} nodes`;
-  redraw();
-}
-function spawnsHTML(){
-  const stats = [...mechStats(st.alloc).values()];
-  const rank = r => r.guaranteed ? 0 : r.chance ? 1 : r.inc ? 2 : 3;
-  stats.sort((a, b) => rank(a) - rank(b) || (b.chance + b.inc) - (a.chance + a.inc) || mechLabel(a.key).localeCompare(mechLabel(b.key)));
-  const active = stats.filter(r => rank(r) < 3), idle = stats.filter(r => rank(r) === 3);
-  let h = `<div class="mnote"><b style="color:#8fe39b">Guaranteed</b> = your nodes alone reach 100%, so it spawns in every map. Below that, the map's own (unpublished) base chance and scarabs add on top, so real odds are at least what's shown. "Increased" chance only multiplies that base, so it can't guarantee anything by itself.</div>`;
-  if (!active.length) h += `<div class="empty" style="margin:10px 0">None of your allocated nodes change spawn chances yet.</div>`;
-  for (const r of active){
-    const badge = r.guaranteed ? `<span class="badge g">${r.count > 1 ? r.count + "× " : ""}Guaranteed</span>` : r.chance ? `<span class="badge p">${fmtNum(r.chance)}%</span>` : `<span class="badge i">+${fmtNum(r.inc)}% inc</span>`;
-    let det = "";
-    if (r.surpass) det += `<b>${fmtNum(r.surpass)}%</b> Surpassing chance` + (r.guaranteed ? ` → ${r.count - r.extra} guaranteed${r.rem ? `, ${fmtNum(r.rem)}% for one more` : ""}` : ` — ${fmtNum(100 - r.chance)}% more from the tree to guarantee it`);
-    else if (r.flat) det += `<b>${fmtNum(Math.min(r.flat, 100))}%</b> chance` + (r.flat >= 100 ? (r.flat > 100 ? ` (${fmtNum(r.flat - 100)}% wasted over the cap)` : "") : ` — ${fmtNum(100 - r.flat)}% more to guarantee it`);
-    if (r.extra) det += (det ? "<br>" : "") + `<b>${r.extra}</b> additional guaranteed`;
-    if (r.inc) det += (det ? "<br>" : "") + `<b>+${fmtNum(r.inc)}%</b> increased chance (multiplies the map's base chance)`;
-    const bar = r.surpass ? (r.guaranteed ? r.rem : r.chance) : Math.min(r.chance, 100);
-    h += `<div class="mrow"><div class="mtop"><span class="mname">${esc(mechLabel(r.key))}</span>${badge}</div><div class="mdet">${det}<button class="mlink" data-k="${esc(r.key)}">show nodes</button></div>${r.chance ? `<div class="bar"><i class="${r.guaranteed ? "g" : ""}" style="width:${r.guaranteed && !r.rem ? 100 : bar}%"></i></div>` : ""}</div>`;
-  }
-  if (idle.length) h += `<div class="sumh" style="margin-top:16px">Not invested — tap to see nodes</div>` + idle.map(r => `<span class="chip" data-k="${esc(r.key)}">${esc(mechLabel(r.key))}</span>`).join("");
-  return h;
-}
+      /* ---------- league mechanic spawn chances ---------- */
+      const MECH_LABEL = {
+        "sacred flora": "Harvest (Sacred Flora)",
+        "rogue exile": "Rogue Exiles",
+        shrine: "Shrines",
+        strongbox: "Strongboxes",
+        "imprisoned monster": "Essences (Imprisoned Monsters)",
+        "ore deposits": "Ore Deposits",
+        "multiple ore deposits": "Multiple Ore Deposits",
+        "trial of ascendancy": "Labyrinth Trial",
+        "tormented spirit": "Tormented Spirits",
+        mercenary: "Mercenaries",
+        "mirror of delirium": "Delirium (Mirror)",
+        "demonic evocator": "Beyond (Demonic Evocator)",
+        "viridian wildwood": "Viridian Wildwood",
+        mirage: "Mirage",
+        "buried sentinel": "Buried Sentinel",
+        "atlas anomalies": "Atlas Anomalies",
+        "certain tormented spirits": "Specific Tormented Spirits",
+        "packs with mirrored rare monsters": "Mirrored Rare packs",
+        "packs of divination-touched magic monsters":
+          "Divination-Touched packs",
+        "pack of incursion monsters": "Incursion packs",
+        "apparition shrine": "Apparition Shrine",
+        "memory tears (tier 16+)": "Memory Tears (T16+)",
+      };
+      const NUM = "(\\d+(?:\\.\\d+)?)",
+        TO = "to (?:contain|be haunted by|be inhabited by)";
+      const MECH_RULES = [
+        {
+          kind: "surpass",
+          re: new RegExp(
+            `^Your Maps have \\+?${NUM}% Surpassing Chance ${TO} (.+)$`,
+            "i",
+          ),
+        },
+        {
+          kind: "flat",
+          re: new RegExp(`^Your Maps have \\+${NUM}% chance ${TO} (.+)$`, "i"),
+        },
+        {
+          kind: "inc",
+          re: new RegExp(
+            `^Your Maps have ${NUM}% increased chance ${TO} (.+)$`,
+            "i",
+          ),
+        },
+        {
+          kind: "inc",
+          re: new RegExp(
+            `^${NUM}% increased chance for your Maps to contain (.+)$`,
+            "i",
+          ),
+        },
+        {
+          kind: "inc",
+          re: new RegExp(
+            `^${NUM}% increased chance for (Atlas Anomalies) to manifest in your Maps$`,
+            "i",
+          ),
+        },
+        {
+          kind: "extra",
+          re: /^Your Maps (?:contains?|are inhabited by) (an|a|\d+) additional (.+)$/i,
+        },
+      ];
+      function mechKey(t) {
+        return t
+          .trim()
+          .replace(/^(an?|the) /i, "")
+          .replace(/\.$/, "")
+          .toLowerCase();
+      }
+      function mechLabel(k) {
+        return MECH_LABEL[k] || k.replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+      }
+      function parseMech(lines) {
+        const out = [];
+        for (const raw of lines || []) {
+          const line = raw.replace(/\s*\n\s*/g, " ").trim();
+          for (const r of MECH_RULES) {
+            const m = line.match(r.re);
+            if (!m) continue;
+            const val =
+              r.kind === "extra" ? (/^\d+$/.test(m[1]) ? +m[1] : 1) : +m[1];
+            out.push({ key: mechKey(m[2]), kind: r.kind, val });
+            break;
+          }
+        }
+        return out;
+      }
+      function indexMechanics() {
+        st.mechNodes = new Map();
+        for (const n of st.tree.nodes) {
+          n.mech = parseMech(n.s);
+          n.vmech = n.v ? n.v.map((v) => parseMech(v.s)) : null;
+          const keys = new Set(
+            [...n.mech, ...(n.vmech || []).flat()].map((m) => m.key),
+          );
+          for (const k of keys) {
+            if (!st.mechNodes.has(k)) st.mechNodes.set(k, []);
+            st.mechNodes.get(k).push(n);
+          }
+        }
+      }
+      function mechStats(set, variants = st.variants) {
+        const res = new Map();
+        for (const k of st.mechNodes.keys())
+          res.set(k, { key: k, surpass: 0, flat: 0, inc: 0, extra: 0, n: 0 });
+        for (const id of set) {
+          const n = st.byId.get(id);
+          if (!n) continue;
+          const list = n.vmech
+            ? n.mech.concat(n.vmech[variants.get(id) ?? 0] || [])
+            : n.mech;
+          for (const m of list) {
+            const r = res.get(m.key);
+            r[m.kind] += m.val;
+            r.n++;
+          }
+        }
+        for (const r of res.values()) {
+          r.chance = r.surpass + r.flat;
+          r.count =
+            r.extra +
+            (r.surpass ? Math.floor(r.chance / 100) : r.flat >= 100 ? 1 : 0);
+          r.rem = r.surpass
+            ? +(r.chance % 100).toFixed(2)
+            : r.flat >= 100
+              ? 0
+              : r.chance;
+          r.guaranteed = r.count > 0;
+        }
+        return res;
+      }
+      function mechLine(r) {
+        if (r.guaranteed) {
+          if (r.surpass || r.extra)
+            return (
+              `${r.count} guaranteed` +
+              (r.rem ? ` + ${fmtNum(r.rem)}% for another` : "")
+            );
+          return "Guaranteed";
+        }
+        if (r.chance) return `${fmtNum(r.chance)}% from tree`;
+        if (r.inc) return `+${fmtNum(r.inc)}% increased`;
+        return "0%";
+      }
+      function guaranteedKeys(set) {
+        return new Set(
+          [...mechStats(set).values()]
+            .filter((r) => r.guaranteed)
+            .map((r) => r.key),
+        );
+      }
+      let lastGuaranteed = new Set();
+      function updateMechanics(announce) {
+        const now = guaranteedKeys(st.alloc);
+        $("#spawnBtn .n").textContent = "✓ " + now.size;
+        if (announce) {
+          const gained = [...now].filter((k) => !lastGuaranteed.has(k)),
+            lost = [...lastGuaranteed].filter((k) => !now.has(k));
+          if (gained.length)
+            toast(`Now guaranteed: ${gained.map(mechLabel).join(", ")}`);
+          else if (lost.length)
+            toast(`No longer guaranteed: ${lost.map(mechLabel).join(", ")}`);
+        }
+        lastGuaranteed = now;
+      }
+      function mechDiffHTML(n) {
+        if (!st.mechNodes) return "";
+        let after;
+        if (st.alloc.has(n.id)) {
+          const rm = removalFor(n.id);
+          after = new Set([...st.alloc].filter((i) => !rm.has(i)));
+        } else {
+          const p = pathTo(n.id);
+          if (!p.length) return "";
+          after = new Set([...st.alloc, ...p]);
+        }
+        const vars = new Map(st.variants);
+        for (const id of after)
+          if (st.byId.get(id).v && !vars.has(id)) vars.set(id, 0);
+        const a = mechStats(st.alloc),
+          b = mechStats(after, vars);
+        const rows = [];
+        for (const [k, rb] of b) {
+          const ra = a.get(k);
+          if (
+            ra.chance === rb.chance &&
+            ra.inc === rb.inc &&
+            ra.extra === rb.extra
+          )
+            continue;
+          const flip = rb.guaranteed !== ra.guaranteed;
+          rows.push(
+            `<div class="${rb.guaranteed ? "gg" : ""}">${esc(mechLabel(k))}: ${mechLine(ra)} → <b>${mechLine(rb)}</b>${flip ? (rb.guaranteed ? " ✓" : " ✗") : ""}</div>`,
+          );
+        }
+        return rows.length
+          ? `<div class="tipm">${rows.slice(0, 5).join("")}</div>`
+          : "";
+      }
+      function highlightNodes(list, label) {
+        st.matches = list;
+        st.matchSet = new Set(list.map((n) => n.id));
+        st.matchIdx = -1;
+        $("#search").value = "";
+        $("#matchinfo").textContent = `${label}: ${list.length} nodes`;
+        redraw();
+      }
+      function spawnsHTML() {
+        const stats = [...mechStats(st.alloc).values()];
+        const rank = (r) => (r.guaranteed ? 0 : r.chance ? 1 : r.inc ? 2 : 3);
+        stats.sort(
+          (a, b) =>
+            rank(a) - rank(b) ||
+            b.chance + b.inc - (a.chance + a.inc) ||
+            mechLabel(a.key).localeCompare(mechLabel(b.key)),
+        );
+        const active = stats.filter((r) => rank(r) < 3),
+          idle = stats.filter((r) => rank(r) === 3);
+        let h = `<div class="mnote"><b style="color:#8fe39b">Guaranteed</b> = your nodes alone reach 100%, so it spawns in every map. Below that, the map's own (unpublished) base chance and scarabs add on top, so real odds are at least what's shown. "Increased" chance only multiplies that base, so it can't guarantee anything by itself.</div>`;
+        if (!active.length)
+          h += `<div class="empty" style="margin:10px 0">None of your allocated nodes change spawn chances yet.</div>`;
+        for (const r of active) {
+          const badge = r.guaranteed
+            ? `<span class="badge g">${r.count > 1 ? r.count + "× " : ""}Guaranteed</span>`
+            : r.chance
+              ? `<span class="badge p">${fmtNum(r.chance)}%</span>`
+              : `<span class="badge i">+${fmtNum(r.inc)}% inc</span>`;
+          let det = "";
+          if (r.surpass)
+            det +=
+              `<b>${fmtNum(r.surpass)}%</b> Surpassing chance` +
+              (r.guaranteed
+                ? ` → ${r.count - r.extra} guaranteed${r.rem ? `, ${fmtNum(r.rem)}% for one more` : ""}`
+                : ` — ${fmtNum(100 - r.chance)}% more from the tree to guarantee it`);
+          else if (r.flat)
+            det +=
+              `<b>${fmtNum(Math.min(r.flat, 100))}%</b> chance` +
+              (r.flat >= 100
+                ? r.flat > 100
+                  ? ` (${fmtNum(r.flat - 100)}% wasted over the cap)`
+                  : ""
+                : ` — ${fmtNum(100 - r.flat)}% more to guarantee it`);
+          if (r.extra)
+            det +=
+              (det ? "<br>" : "") + `<b>${r.extra}</b> additional guaranteed`;
+          if (r.inc)
+            det +=
+              (det ? "<br>" : "") +
+              `<b>+${fmtNum(r.inc)}%</b> increased chance (multiplies the map's base chance)`;
+          const bar = r.surpass
+            ? r.guaranteed
+              ? r.rem
+              : r.chance
+            : Math.min(r.chance, 100);
+          h += `<div class="mrow"><div class="mtop"><span class="mname">${esc(mechLabel(r.key))}</span>${badge}</div><div class="mdet">${det}<button class="mlink" data-k="${esc(r.key)}">show nodes</button></div>${r.chance ? `<div class="bar"><i class="${r.guaranteed ? "g" : ""}" style="width:${r.guaranteed && !r.rem ? 100 : bar}%"></i></div>` : ""}</div>`;
+        }
+        if (idle.length)
+          h +=
+            `<div class="sumh" style="margin-top:16px">Not invested — tap to see nodes</div>` +
+            idle
+              .map(
+                (r) =>
+                  `<span class="chip" data-k="${esc(r.key)}">${esc(mechLabel(r.key))}</span>`,
+              )
+              .join("");
+        return h;
+      }
 
-/* ---------- encoding ---------- */
-const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-function toB62(bytes){ let n = 1n; for (const b of bytes) n = (n << 8n) | BigInt(b); let s = ""; while (n > 0n){ s = B62[Number(n % 62n)] + s; n /= 62n; } return s; }
-function fromB62(s){ let n = 0n; for (const c of s){ const v = B62.indexOf(c); if (v < 0) throw new Error("bad character"); n = n * 62n + BigInt(v); } const out = []; while (n > 0n){ out.unshift(Number(n & 255n)); n >>= 8n; } if (out.shift() !== 1) throw new Error("bad code"); return out; }
-function toB64url(bytes){ return btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
-function fromB64url(s){ s = s.replace(/-/g,"+").replace(/_/g,"/"); while (s.length % 4) s += "="; return [...atob(s)].map(c => c.charCodeAt(0)); }
-// pathofexile.com tree format v6: version u32, class u8, ascendancy u8, nodes (u8 count + u16 ids), clusters (u8 + u16), masteries/variants (u8 count + [u16 effect, u16 node])
-function encodeBytes(){
-  const ids = [...st.alloc].filter(i => i !== START_ID).sort((a,b) => a-b);
-  const vs = [...st.variants].filter(([id]) => st.alloc.has(id) && st.byId.get(id)?.v);
-  const b = [0,0,0,6, 0, 0, ids.length];
-  for (const i of ids) b.push(i >> 8, i & 255);
-  b.push(0, vs.length);
-  for (const [id, idx] of vs){ const e = st.byId.get(id).v[idx].e; b.push(e >> 8, e & 255, id >> 8, id & 255); }
-  return b;
-}
-function decodeBytes(b){
-  const ver = (b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3];
-  if (ver < 4 || ver > 6) throw new Error("unsupported tree version " + ver);
-  let p = 6; const n = b[p++]; const ids = [];
-  for (let i = 0; i < n; i++){ ids.push((b[p]<<8)|b[p+1]); p += 2; }
-  const variants = [];
-  if (ver >= 5 && p < b.length){ const c = b[p++]; p += c*2; }
-  if (ver >= 6 && p < b.length){ const m = b[p++]; for (let i = 0; i < m; i++){ variants.push([(b[p]<<8)|b[p+1], (b[p+2]<<8)|b[p+3]]); p += 4; } }
-  if (p > b.length) throw new Error("truncated code");
-  return {ids, variants};
-}
-function applyDecoded({ids, variants}){
-  const set = new Set([START_ID]);
-  for (const i of ids){ const n = st.byId.get(i); if (n && n.t !== "mastery") set.add(i); }
-  const keep = reachable(set);
-  st.alloc = keep; st.variants = new Map();
-  for (const id of keep){ const n = st.byId.get(id); if (n.v) st.variants.set(id, 0); }
-  for (const [eff, id] of variants){ const n = st.byId.get(id); if (!n?.v || !keep.has(id)) continue; const idx = n.v.findIndex(v => v.e === eff); if (idx >= 0) st.variants.set(id, idx); }
-  return ids.length - (keep.size - 1);
-}
-function longCode(){ return (st.key === "ruthless" ? "r-" : "s-") + toB62(encodeBytes()); }
-/* Compact format ("s1-" / "r1-"): walks the allocated tree outward from the start node in a fixed order
+      /* ---------- encoding ---------- */
+      const B62 =
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+      function toB62(bytes) {
+        let n = 1n;
+        for (const b of bytes) n = (n << 8n) | BigInt(b);
+        let s = "";
+        while (n > 0n) {
+          s = B62[Number(n % 62n)] + s;
+          n /= 62n;
+        }
+        return s;
+      }
+      function fromB62(s) {
+        let n = 0n;
+        for (const c of s) {
+          const v = B62.indexOf(c);
+          if (v < 0) throw new Error("bad character");
+          n = n * 62n + BigInt(v);
+        }
+        const out = [];
+        while (n > 0n) {
+          out.unshift(Number(n & 255n));
+          n >>= 8n;
+        }
+        if (out.shift() !== 1) throw new Error("bad code");
+        return out;
+      }
+      function toB64url(bytes) {
+        return btoa(String.fromCharCode(...bytes))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+      }
+      function fromB64url(s) {
+        s = s.replace(/-/g, "+").replace(/_/g, "/");
+        while (s.length % 4) s += "=";
+        return [...atob(s)].map((c) => c.charCodeAt(0));
+      }
+      // pathofexile.com tree format v6: version u32, class u8, ascendancy u8, nodes (u8 count + u16 ids), clusters (u8 + u16), masteries/variants (u8 count + [u16 effect, u16 node])
+      function encodeBytes() {
+        const ids = [...st.alloc]
+          .filter((i) => i !== START_ID)
+          .sort((a, b) => a - b);
+        const vs = [...st.variants].filter(
+          ([id]) => st.alloc.has(id) && st.byId.get(id)?.v,
+        );
+        const b = [0, 0, 0, 6, 0, 0, ids.length];
+        for (const i of ids) b.push(i >> 8, i & 255);
+        b.push(0, vs.length);
+        for (const [id, idx] of vs) {
+          const e = st.byId.get(id).v[idx].e;
+          b.push(e >> 8, e & 255, id >> 8, id & 255);
+        }
+        return b;
+      }
+      function decodeBytes(b) {
+        const ver = (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+        if (ver < 4 || ver > 6)
+          throw new Error("unsupported tree version " + ver);
+        let p = 6;
+        const n = b[p++];
+        const ids = [];
+        for (let i = 0; i < n; i++) {
+          ids.push((b[p] << 8) | b[p + 1]);
+          p += 2;
+        }
+        const variants = [];
+        if (ver >= 5 && p < b.length) {
+          const c = b[p++];
+          p += c * 2;
+        }
+        if (ver >= 6 && p < b.length) {
+          const m = b[p++];
+          for (let i = 0; i < m; i++) {
+            variants.push([(b[p] << 8) | b[p + 1], (b[p + 2] << 8) | b[p + 3]]);
+            p += 4;
+          }
+        }
+        if (p > b.length) throw new Error("truncated code");
+        return { ids, variants };
+      }
+      function applyDecoded({ ids, variants }) {
+        const set = new Set([START_ID]);
+        for (const i of ids) {
+          const n = st.byId.get(i);
+          if (n && n.t !== "mastery") set.add(i);
+        }
+        const keep = reachable(set);
+        st.alloc = keep;
+        st.variants = new Map();
+        for (const id of keep) {
+          const n = st.byId.get(id);
+          if (n.v) st.variants.set(id, 0);
+        }
+        for (const [eff, id] of variants) {
+          const n = st.byId.get(id);
+          if (!n?.v || !keep.has(id)) continue;
+          const idx = n.v.findIndex((v) => v.e === eff);
+          if (idx >= 0) st.variants.set(id, idx);
+        }
+        return ids.length - (keep.size - 1);
+      }
+      function longCode() {
+        return (st.key === "ruthless" ? "r-" : "s-") + toB62(encodeBytes());
+      }
+      /* Compact format ("s1-" / "r1-"): walks the allocated tree outward from the start node in a fixed order
    and stores one bit per neighbouring node (allocated or not), then the variant picks, then a 12-bit
    checksum. Allocations are always connected, so this is far smaller than listing 16-bit node ids.
    It depends on the tree's exact layout, so a future patch that rewires nodes breaks old compact links;
    the long format (node ids) keeps working across patches. */
-function treeChecksum(ids){
-  let h = 0x811c9dc5;
-  for (const id of [...ids].sort((a, b) => a - b)){ h ^= id & 255; h = Math.imul(h, 16777619); h ^= id >> 8; h = Math.imul(h, 16777619); }
-  return (h >>> 0) & 0xfff;
-}
-function walkOrder(isAlloc, onBit){
-  const decided = new Set([START_ID]), order = [START_ID];
-  for (let i = 0; i < order.length; i++){
-    for (const nb of st.adj.get(order[i]) || []){
-      if (decided.has(nb)) continue;
-      decided.add(nb);
-      if (onBit(nb, isAlloc(nb))) order.push(nb);
-    }
-  }
-  return order;
-}
-const varBits = n => Math.max(1, Math.ceil(Math.log2(n.v.length)));
-function encodeCompact(){
-  const bits = [];
-  const push = (v, w) => { for (let i = w - 1; i >= 0; i--) bits.push((v >> i) & 1); };
-  push(treeChecksum(st.alloc), 12);
-  const order = walkOrder(id => st.alloc.has(id), (id, on) => { bits.push(on ? 1 : 0); return on; });
-  for (const id of order){ const n = st.byId.get(id); if (n.v) push(st.variants.get(id) ?? 0, varBits(n)); }
-  let big = 1n; for (const b of bits) big = (big << 1n) | BigInt(b);
-  let out = ""; while (big > 0n){ out = B62[Number(big % 62n)] + out; big /= 62n; }
-  return out;
-}
-function decodeCompact(str){
-  let big = 0n; for (const c of str){ const v = B62.indexOf(c); if (v < 0) throw new Error("bad character"); big = big * 62n + BigInt(v); }
-  const bits = big.toString(2).slice(1); let p = 0;
-  const read = w => { if (p + w > bits.length) throw new Error("truncated code"); const v = parseInt(bits.slice(p, p + w), 2); p += w; return v; };
-  const sum = read(12);
-  const order = walkOrder(() => false, () => read(1) === 1);
-  const alloc = new Set(order), variants = new Map();
-  for (const id of order){ const n = st.byId.get(id); if (n.v){ const i = read(varBits(n)); variants.set(id, i < n.v.length ? i : 0); } }
-  if (treeChecksum(alloc) !== sum) throw new Error("this short link was made for a different version of the tree");
-  st.alloc = alloc; st.variants = variants;
-  return 0;
-}
-function currentCode(){ return (st.key === "ruthless" ? "r1-" : "s1-") + encodeCompact(); }
-function writeHash(){
-  const h = st.alloc.size > 1 || st.key !== "standard" ? "#" + currentCode() : "";
-  try { history.replaceState(null, "", h || location.pathname + location.search); } catch {}
-  lastHash = location.hash;
-}
-let lastHash = "";
-async function readCode(text){
-  text = text.trim();
-  const compact = text.match(/(?:^|#)([sr])1-([0-9A-Za-z]+)\s*$/);
-  if (compact){
-    const key = compact[1] === "r" ? "ruthless" : "standard";
-    if (key !== st.key) await loadTree(key);
-    return decodeCompact(compact[2]);
-  }
-  const own = text.match(/(?:^|#)([sr])-([0-9A-Za-z]+)\s*$/);
-  if (own){
-    const bytes = fromB62(own[2]);
-    const key = own[1] === "r" ? "ruthless" : "standard";
-    if (key !== st.key) await loadTree(key);
-    return applyDecoded(decodeBytes(bytes));
-  }
-  let code = text;
-  const m = text.match(/pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/(?:[^/?#]+\/)*?([A-Za-z0-9_\-=]{8,})/);
-  if (m) code = m[1];
-  code = code.split(/[?#]/)[0];
-  if (!/^[A-Za-z0-9_\-=]+$/.test(code)) throw new Error("not a recognised tree link or code");
-  if (/ruthless/i.test(text) && st.key !== "ruthless") await loadTree("ruthless");
-  return applyDecoded(decodeBytes(fromB64url(code)));
-}
-async function loadFromHash(){
-  const h = decodeURIComponent(location.hash.slice(1));
-  if (!h){ return; }
-  try { await readCode(h); } catch (e){ toast("Couldn't read the tree in this link" + (/version/.test(e.message) ? " — it was made for a different tree version" : "")); }
-}
-function shareURL(long){
-  let inFrame = false; try { inFrame = window.self !== window.top; } catch { inFrame = true; }
-  const base = inFrame && ARTIFACT_URL ? ARTIFACT_URL : location.href.split("#")[0];
-  return st.alloc.size > 1 || st.key !== "standard" ? base + "#" + (long ? longCode() : currentCode()) : base;
-}
+      function treeChecksum(ids) {
+        let h = 0x811c9dc5;
+        for (const id of [...ids].sort((a, b) => a - b)) {
+          h ^= id & 255;
+          h = Math.imul(h, 16777619);
+          h ^= id >> 8;
+          h = Math.imul(h, 16777619);
+        }
+        return (h >>> 0) & 0xfff;
+      }
+      function walkOrder(isAlloc, onBit) {
+        const decided = new Set([START_ID]),
+          order = [START_ID];
+        for (let i = 0; i < order.length; i++) {
+          for (const nb of st.adj.get(order[i]) || []) {
+            if (decided.has(nb)) continue;
+            decided.add(nb);
+            if (onBit(nb, isAlloc(nb))) order.push(nb);
+          }
+        }
+        return order;
+      }
+      const varBits = (n) => Math.max(1, Math.ceil(Math.log2(n.v.length)));
+      function encodeCompact() {
+        const bits = [];
+        const push = (v, w) => {
+          for (let i = w - 1; i >= 0; i--) bits.push((v >> i) & 1);
+        };
+        push(treeChecksum(st.alloc), 12);
+        const order = walkOrder(
+          (id) => st.alloc.has(id),
+          (id, on) => {
+            bits.push(on ? 1 : 0);
+            return on;
+          },
+        );
+        for (const id of order) {
+          const n = st.byId.get(id);
+          if (n.v) push(st.variants.get(id) ?? 0, varBits(n));
+        }
+        let big = 1n;
+        for (const b of bits) big = (big << 1n) | BigInt(b);
+        let out = "";
+        while (big > 0n) {
+          out = B62[Number(big % 62n)] + out;
+          big /= 62n;
+        }
+        return out;
+      }
+      function decodeCompact(str) {
+        let big = 0n;
+        for (const c of str) {
+          const v = B62.indexOf(c);
+          if (v < 0) throw new Error("bad character");
+          big = big * 62n + BigInt(v);
+        }
+        const bits = big.toString(2).slice(1);
+        let p = 0;
+        const read = (w) => {
+          if (p + w > bits.length) throw new Error("truncated code");
+          const v = parseInt(bits.slice(p, p + w), 2);
+          p += w;
+          return v;
+        };
+        const sum = read(12);
+        const order = walkOrder(
+          () => false,
+          () => read(1) === 1,
+        );
+        const alloc = new Set(order),
+          variants = new Map();
+        for (const id of order) {
+          const n = st.byId.get(id);
+          if (n.v) {
+            const i = read(varBits(n));
+            variants.set(id, i < n.v.length ? i : 0);
+          }
+        }
+        if (treeChecksum(alloc) !== sum)
+          throw new Error(
+            "this short link was made for a different version of the tree",
+          );
+        st.alloc = alloc;
+        st.variants = variants;
+        return 0;
+      }
+      function currentCode() {
+        return (st.key === "ruthless" ? "r1-" : "s1-") + encodeCompact();
+      }
+      function writeHash() {
+        const h =
+          st.alloc.size > 1 || st.key !== "standard" ? "#" + currentCode() : "";
+        try {
+          history.replaceState(
+            null,
+            "",
+            h || location.pathname + location.search,
+          );
+        } catch {}
+        lastHash = location.hash;
+      }
+      let lastHash = "";
+      async function readCode(text) {
+        text = text.trim();
+        const compact = text.match(/(?:^|#)([sr])1-([0-9A-Za-z]+)\s*$/);
+        if (compact) {
+          const key = compact[1] === "r" ? "ruthless" : "standard";
+          if (key !== st.key) await loadTree(key);
+          return decodeCompact(compact[2]);
+        }
+        const own = text.match(/(?:^|#)([sr])-([0-9A-Za-z]+)\s*$/);
+        if (own) {
+          const bytes = fromB62(own[2]);
+          const key = own[1] === "r" ? "ruthless" : "standard";
+          if (key !== st.key) await loadTree(key);
+          return applyDecoded(decodeBytes(bytes));
+        }
+        let code = text;
+        const m = text.match(
+          /pathofexile\.com\/(?:fullscreen-)?atlas-skill-tree\/(?:[^/?#]+\/)*?([A-Za-z0-9_\-=]{8,})/,
+        );
+        if (m) code = m[1];
+        code = code.split(/[?#]/)[0];
+        if (!/^[A-Za-z0-9_\-=]+$/.test(code))
+          throw new Error("not a recognised tree link or code");
+        if (/ruthless/i.test(text) && st.key !== "ruthless")
+          await loadTree("ruthless");
+        return applyDecoded(decodeBytes(fromB64url(code)));
+      }
+      async function loadFromHash() {
+        const h = decodeURIComponent(location.hash.slice(1));
+        if (!h) {
+          return;
+        }
+        try {
+          await readCode(h);
+        } catch (e) {
+          toast(
+            "Couldn't read the tree in this link" +
+              (/version/.test(e.message)
+                ? " — it was made for a different tree version"
+                : ""),
+          );
+        }
+      }
+      function shareURL(long) {
+        let inFrame = false;
+        try {
+          inFrame = window.self !== window.top;
+        } catch {
+          inFrame = true;
+        }
+        const base =
+          inFrame && ARTIFACT_URL ? ARTIFACT_URL : location.href.split("#")[0];
+        return st.alloc.size > 1 || st.key !== "standard"
+          ? base + "#" + (long ? longCode() : currentCode())
+          : base;
+      }
 
-/* ---------- camera ---------- */
-function resize(){
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = innerWidth; H = innerHeight;
-  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-  redraw();
-}
-function fit(){
-  const [x0, y0, x1, y1] = st.tree.bounds; const top = document.querySelector("header").offsetHeight;
-  const panelW = (!$("#panel").classList.contains("hidden") && W > 760) ? 340 : 0;
-  const aw = W - panelW, ah = H - top;
-  cam.s = Math.min(aw / ((x1 - x0) * 1.08), ah / ((y1 - y0) * 1.08));
-  cam.x = (x0 + x1) / 2 + (panelW / 2) / cam.s; cam.y = (y0 + y1) / 2 - (top / 2) / cam.s;
-  redraw();
-}
-const MIN_S = () => Math.min(W, H) / 30000, MAX_S = 1.2;
-function zoomAt(f, sx, sy){
-  const wx = (sx - W/2) / cam.s + cam.x, wy = (sy - H/2) / cam.s + cam.y;
-  cam.s = Math.max(MIN_S(), Math.min(MAX_S, cam.s * f));
-  cam.x = wx - (sx - W/2) / cam.s; cam.y = wy - (sy - H/2) / cam.s; redraw();
-}
-const toWorld = (sx, sy) => [(sx - W/2) / cam.s + cam.x, (sy - H/2) / cam.s + cam.y];
-const toScreen = (wx, wy) => [(wx - cam.x) * cam.s + W/2, (wy - cam.y) * cam.s + H/2];
-function centerOn(n, minS){ cam.x = n.x; cam.y = n.y; if (minS && cam.s < minS) cam.s = minS; redraw(); }
+      /* ---------- camera ---------- */
+      function resize() {
+        DPR = Math.min(window.devicePixelRatio || 1, 2);
+        W = innerWidth;
+        H = innerHeight;
+        canvas.width = Math.round(W * DPR);
+        canvas.height = Math.round(H * DPR);
+        redraw();
+      }
+      function fit() {
+        const [x0, y0, x1, y1] = st.tree.bounds;
+        const top = document.querySelector("header").offsetHeight;
+        const panelW =
+          !$("#panel").classList.contains("hidden") && W > 760 ? 340 : 0;
+        const aw = W - panelW,
+          ah = H - top;
+        cam.s = Math.min(aw / ((x1 - x0) * 1.08), ah / ((y1 - y0) * 1.08));
+        cam.x = (x0 + x1) / 2 + panelW / 2 / cam.s;
+        cam.y = (y0 + y1) / 2 - top / 2 / cam.s;
+        redraw();
+      }
+      const MIN_S = () => Math.min(W, H) / 30000,
+        MAX_S = 1.2;
+      function zoomAt(f, sx, sy) {
+        const wx = (sx - W / 2) / cam.s + cam.x,
+          wy = (sy - H / 2) / cam.s + cam.y;
+        cam.s = Math.max(MIN_S(), Math.min(MAX_S, cam.s * f));
+        cam.x = wx - (sx - W / 2) / cam.s;
+        cam.y = wy - (sy - H / 2) / cam.s;
+        redraw();
+      }
+      const toWorld = (sx, sy) => [
+        (sx - W / 2) / cam.s + cam.x,
+        (sy - H / 2) / cam.s + cam.y,
+      ];
+      const toScreen = (wx, wy) => [
+        (wx - cam.x) * cam.s + W / 2,
+        (wy - cam.y) * cam.s + H / 2,
+      ];
+      function centerOn(n, minS) {
+        cam.x = n.x;
+        cam.y = n.y;
+        if (minS && cam.s < minS) cam.s = minS;
+        redraw();
+      }
 
-/* ---------- drawing ---------- */
-function spr(cat, key, x, y, scale = SPRITE_SCALE, alpha = 1){
-  const s = sprites[cat]; const c = s?.c[key]; if (!c) return;
-  const w = c[2] * scale, h = c[3] * scale;
-  if (alpha !== 1) ctx.globalAlpha = alpha;
-  ctx.drawImage(images[s.file], c[0], c[1], c[2], c[3], x - w/2, y - h/2, w, h);
-  if (alpha !== 1) ctx.globalAlpha = 1;
-}
-function edgePath(e, A, B){
-  ctx.beginPath();
-  if (e.arc) ctx.arc(e.c[0], e.c[1], e.arc.r, e.arc.a1, e.arc.a2, e.arc.ccw);
-  else { ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); }
-}
-function draw(){
-  dirty = false;
-  const t = st.tree; if (!t) return;
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = "#07080a"; ctx.fillRect(0, 0, W, H);
-  if (bgPattern){ ctx.globalAlpha = .5; ctx.fillStyle = bgPattern; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
-  const s = cam.s;
-  ctx.setTransform(s*DPR, 0, 0, s*DPR, (W/2 - cam.x*s)*DPR, (H/2 - cam.y*s)*DPR);
-  const [vx0, vy0] = toWorld(0, 0), [vx1, vy1] = toWorld(W, H); const pad = 400;
-  const vis = (x, y, r = pad) => x > vx0 - r && x < vx1 + r && y > vy0 - r && y < vy1 + r;
-  const start = st.byId.get(START_ID);
-  // atlas backdrop
-  const bgc = sprites.atlasBackground.c.AtlasPassiveBackground;
-  if (bgc){ const size = 15200; ctx.globalAlpha = .55; ctx.drawImage(images[sprites.atlasBackground.file], 0, 0, bgc[2], bgc[3], start.x - size/2, (t.bounds[1]+t.bounds[3])/2 - size/2, size, size); ctx.globalAlpha = 1; }
-  // group backgrounds
-  for (const g of Object.values(t.groups)){ if (vis(g.x, g.y, 900)) spr("groupBackground", g.b, g.x + g.ox, g.y + g.oy, SPRITE_SCALE, .9); }
-  // masteries
-  for (const n of t.nodes){
-    if (n.t !== "mastery" || !vis(n.x, n.y)) continue;
-    const active = (st.groupNodes.get(n.g) || []).some(m => m.t !== "mastery" && st.alloc.has(m.id));
-    if (active) spr("masteryOverlay", n.i, n.x, n.y, 1.6, .9);
-    spr("mastery", n.i, n.x, n.y, SPRITE_SCALE, active ? 1 : .55);
-  }
-  // edges
-  const lw = Math.max(9, 1.6 / s);
-  const layers = {base:[], alloc:[], add:[], rem:[]};
-  for (const e of t.edges){
-    if (e.w) continue;
-    const A = st.byId.get(e.a), B = st.byId.get(e.b);
-    if (!vis(A.x, A.y, 2000) && !vis(B.x, B.y, 2000)) continue;
-    const aa = st.alloc.has(e.a), ba = st.alloc.has(e.b);
-    if ((st.removeSet.has(e.a) || st.removeSet.has(e.b)) && aa && ba) layers.rem.push(e);
-    else if (aa && ba) layers.alloc.push(e);
-    else if ((st.addPath.has(e.a) || aa) && (st.addPath.has(e.b) || ba)) layers.add.push(e);
-    else layers.base.push(e);
-  }
-  const stroke = (list, color, width, glow) => {
-    if (!list.length) return;
-    ctx.lineCap = "round";
-    for (const pass of glow ? [0, 1] : [1]){
-      ctx.strokeStyle = pass ? color : glow; ctx.lineWidth = pass ? width : width * 2.4;
-      if (!pass) ctx.globalAlpha = .25;
-      for (const e of list){ edgePath(e, st.byId.get(e.a), st.byId.get(e.b)); ctx.stroke(); }
-      ctx.globalAlpha = 1;
-    }
-  };
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "#000"; ctx.lineWidth = lw * 1.8; ctx.globalAlpha = .55;
-  for (const e of layers.base){ edgePath(e, st.byId.get(e.a), st.byId.get(e.b)); ctx.stroke(); }
-  ctx.globalAlpha = 1;
-  stroke(layers.base, "#4a4335", lw);
-  stroke(layers.alloc, "#d8b366", lw * 1.15, "#f0c860");
-  stroke(layers.add, "#86c0ea", lw * 1.15, "#86c0ea");
-  stroke(layers.rem, "#e06a5e", lw * 1.15, "#e06a5e");
-  // wormhole link when focused
-  const focus = st.hover ?? st.selected;
-  for (const e of t.edges){
-    if (!e.w || (focus !== e.a && focus !== e.b)) continue;
-    const A = st.byId.get(e.a), B = st.byId.get(e.b);
-    ctx.setLineDash([lw*3, lw*3]); ctx.strokeStyle = "#a6c8ffaa"; ctx.lineWidth = lw * .8;
-    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.stroke(); ctx.setLineDash([]);
-  }
-  // start
-  spr("startNode", "AtlasPassiveSkillScreenStart", start.x, start.y);
-  // nodes
-  const canAlloc = new Set();
-  for (const id of st.alloc) for (const nb of st.adj.get(id) || []) if (!st.alloc.has(nb)) canAlloc.add(nb);
-  for (const n of t.nodes){
-    if (n.t === "mastery" || n.t === "start" || !vis(n.x, n.y)) continue;
-    const a = st.alloc.has(n.id), rem = st.removeSet.has(n.id), add = st.addPath.has(n.id);
-    const lit = a || add;
-    if (n.t === "wormhole") spr(lit ? "wormholeActive" : "wormholeInactive", "Wormhole", n.x, n.y);
-    else spr((lit ? n.t + "Active" : n.t + "Inactive"), n.i, n.x, n.y);
-    const f = FRAME[n.t];
-    spr("frame", a ? f.a : (add || canAlloc.has(n.id)) ? f.c : f.u, n.x, n.y);
-    const r = (HIT_R[n.t] || 40) + 10;
-    if (rem || add){
-      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI*2);
-      ctx.strokeStyle = rem ? "#e06a5e" : "#86c0ea"; ctx.lineWidth = Math.max(6, 2 / s); ctx.stroke();
-    }
-    if (st.matchSet.has(n.id)){
-      ctx.beginPath(); ctx.arc(n.x, n.y, r + 18, 0, Math.PI*2);
-      ctx.strokeStyle = "#ff9a2e"; ctx.lineWidth = Math.max(10, 3 / s); ctx.stroke();
-    }
-    if (n.id === st.selected){
-      ctx.beginPath(); ctx.arc(n.x, n.y, r + 34, 0, Math.PI*2);
-      ctx.strokeStyle = "#fff"; ctx.globalAlpha = .7; ctx.lineWidth = Math.max(5, 1.5 / s); ctx.stroke(); ctx.globalAlpha = 1;
-    }
-  }
-  // search hits as screen-space dots when zoomed far out (so they stay visible)
-  if (st.matches.length && s < .06){
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = "#ff9a2e";
-    for (const n of st.matches){ const [x, y] = toScreen(n.x, n.y); ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2); ctx.fill(); }
-  }
-}
-(function loop(){ if (dirty) draw(); requestAnimationFrame(loop); })();
+      /* ---------- drawing ---------- */
+      function spr(cat, key, x, y, scale = SPRITE_SCALE, alpha = 1) {
+        const s = sprites[cat];
+        const c = s?.c[key];
+        if (!c) return;
+        const w = c[2] * scale,
+          h = c[3] * scale;
+        if (alpha !== 1) ctx.globalAlpha = alpha;
+        ctx.drawImage(
+          images[s.file],
+          c[0],
+          c[1],
+          c[2],
+          c[3],
+          x - w / 2,
+          y - h / 2,
+          w,
+          h,
+        );
+        if (alpha !== 1) ctx.globalAlpha = 1;
+      }
+      function edgePath(e, A, B) {
+        ctx.beginPath();
+        if (e.arc)
+          ctx.arc(e.c[0], e.c[1], e.arc.r, e.arc.a1, e.arc.a2, e.arc.ccw);
+        else {
+          ctx.moveTo(A.x, A.y);
+          ctx.lineTo(B.x, B.y);
+        }
+      }
+      function draw() {
+        dirty = false;
+        const t = st.tree;
+        if (!t) return;
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        ctx.fillStyle = "#07080a";
+        ctx.fillRect(0, 0, W, H);
+        if (bgPattern) {
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = bgPattern;
+          ctx.fillRect(0, 0, W, H);
+          ctx.globalAlpha = 1;
+        }
+        const s = cam.s;
+        ctx.setTransform(
+          s * DPR,
+          0,
+          0,
+          s * DPR,
+          (W / 2 - cam.x * s) * DPR,
+          (H / 2 - cam.y * s) * DPR,
+        );
+        const [vx0, vy0] = toWorld(0, 0),
+          [vx1, vy1] = toWorld(W, H);
+        const pad = 400;
+        const vis = (x, y, r = pad) =>
+          x > vx0 - r && x < vx1 + r && y > vy0 - r && y < vy1 + r;
+        const start = st.byId.get(START_ID);
+        // atlas backdrop
+        const bgc = sprites.atlasBackground.c.AtlasPassiveBackground;
+        if (bgc) {
+          const size = 15200;
+          ctx.globalAlpha = 0.55;
+          ctx.drawImage(
+            images[sprites.atlasBackground.file],
+            0,
+            0,
+            bgc[2],
+            bgc[3],
+            start.x - size / 2,
+            (t.bounds[1] + t.bounds[3]) / 2 - size / 2,
+            size,
+            size,
+          );
+          ctx.globalAlpha = 1;
+        }
+        // group backgrounds
+        for (const g of Object.values(t.groups)) {
+          if (vis(g.x, g.y, 900))
+            spr(
+              "groupBackground",
+              g.b,
+              g.x + g.ox,
+              g.y + g.oy,
+              SPRITE_SCALE,
+              0.9,
+            );
+        }
+        // masteries
+        for (const n of t.nodes) {
+          if (n.t !== "mastery" || !vis(n.x, n.y)) continue;
+          const active = (st.groupNodes.get(n.g) || []).some(
+            (m) => m.t !== "mastery" && st.alloc.has(m.id),
+          );
+          if (active) spr("masteryOverlay", n.i, n.x, n.y, 1.6, 0.9);
+          spr("mastery", n.i, n.x, n.y, SPRITE_SCALE, active ? 1 : 0.55);
+        }
+        // edges
+        const lw = Math.max(9, 1.6 / s);
+        const layers = { base: [], alloc: [], add: [], rem: [] };
+        for (const e of t.edges) {
+          if (e.w) continue;
+          const A = st.byId.get(e.a),
+            B = st.byId.get(e.b);
+          if (!vis(A.x, A.y, 2000) && !vis(B.x, B.y, 2000)) continue;
+          const aa = st.alloc.has(e.a),
+            ba = st.alloc.has(e.b);
+          if ((st.removeSet.has(e.a) || st.removeSet.has(e.b)) && aa && ba)
+            layers.rem.push(e);
+          else if (aa && ba) layers.alloc.push(e);
+          else if ((st.addPath.has(e.a) || aa) && (st.addPath.has(e.b) || ba))
+            layers.add.push(e);
+          else layers.base.push(e);
+        }
+        const stroke = (list, color, width, glow) => {
+          if (!list.length) return;
+          ctx.lineCap = "round";
+          for (const pass of glow ? [0, 1] : [1]) {
+            ctx.strokeStyle = pass ? color : glow;
+            ctx.lineWidth = pass ? width : width * 2.4;
+            if (!pass) ctx.globalAlpha = 0.25;
+            for (const e of list) {
+              edgePath(e, st.byId.get(e.a), st.byId.get(e.b));
+              ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+          }
+        };
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = lw * 1.8;
+        ctx.globalAlpha = 0.55;
+        for (const e of layers.base) {
+          edgePath(e, st.byId.get(e.a), st.byId.get(e.b));
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        stroke(layers.base, "#4a4335", lw);
+        stroke(layers.alloc, "#d8b366", lw * 1.15, "#f0c860");
+        stroke(layers.add, "#86c0ea", lw * 1.15, "#86c0ea");
+        stroke(layers.rem, "#e06a5e", lw * 1.15, "#e06a5e");
+        // wormhole link when focused
+        const focus = st.hover ?? st.selected;
+        for (const e of t.edges) {
+          if (!e.w || (focus !== e.a && focus !== e.b)) continue;
+          const A = st.byId.get(e.a),
+            B = st.byId.get(e.b);
+          ctx.setLineDash([lw * 3, lw * 3]);
+          ctx.strokeStyle = "#a6c8ffaa";
+          ctx.lineWidth = lw * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(A.x, A.y);
+          ctx.lineTo(B.x, B.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        // start
+        spr("startNode", "AtlasPassiveSkillScreenStart", start.x, start.y);
+        // nodes
+        const canAlloc = new Set();
+        for (const id of st.alloc)
+          for (const nb of st.adj.get(id) || [])
+            if (!st.alloc.has(nb)) canAlloc.add(nb);
+        for (const n of t.nodes) {
+          if (n.t === "mastery" || n.t === "start" || !vis(n.x, n.y)) continue;
+          const a = st.alloc.has(n.id),
+            rem = st.removeSet.has(n.id),
+            add = st.addPath.has(n.id);
+          const lit = a || add;
+          if (n.t === "wormhole")
+            spr(
+              lit ? "wormholeActive" : "wormholeInactive",
+              "Wormhole",
+              n.x,
+              n.y,
+            );
+          else spr(lit ? n.t + "Active" : n.t + "Inactive", n.i, n.x, n.y);
+          const f = FRAME[n.t];
+          spr(
+            "frame",
+            a ? f.a : add || canAlloc.has(n.id) ? f.c : f.u,
+            n.x,
+            n.y,
+          );
+          const r = (HIT_R[n.t] || 40) + 10;
+          if (rem || add) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = rem ? "#e06a5e" : "#86c0ea";
+            ctx.lineWidth = Math.max(6, 2 / s);
+            ctx.stroke();
+          }
+          if (st.matchSet.has(n.id)) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r + 18, 0, Math.PI * 2);
+            ctx.strokeStyle = "#ff9a2e";
+            ctx.lineWidth = Math.max(10, 3 / s);
+            ctx.stroke();
+          }
+          if (n.id === st.selected) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r + 34, 0, Math.PI * 2);
+            ctx.strokeStyle = "#fff";
+            ctx.globalAlpha = 0.7;
+            ctx.lineWidth = Math.max(5, 1.5 / s);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+        // search hits as screen-space dots when zoomed far out (so they stay visible)
+        if (st.matches.length && s < 0.06) {
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+          ctx.fillStyle = "#ff9a2e";
+          for (const n of st.matches) {
+            const [x, y] = toScreen(n.x, n.y);
+            ctx.beginPath();
+            ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      (function loop() {
+        if (dirty) draw();
+        requestAnimationFrame(loop);
+      })();
 
-/* ---------- interaction ---------- */
-let touchMode = false;
-function nodeAt(sx, sy, touch){
-  const [wx, wy] = toWorld(sx, sy); let best = null, bd = Infinity;
-  const minR = (touch ? 22 : 9) / cam.s;
-  for (const n of st.tree.nodes){
-    if (n.t === "mastery" || n.t === "start") continue;
-    const d = Math.hypot(n.x - wx, n.y - wy), r = Math.max(HIT_R[n.t] || 40, minR);
-    if (d < r && d < bd){ bd = d; best = n; }
-  }
-  return best;
-}
-const ptrs = new Map(); let drag = null, pinch = null;
-canvas.addEventListener("pointerdown", e => {
-  canvas.setPointerCapture(e.pointerId);
-  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
-  touchMode = e.pointerType !== "mouse";
-  if (ptrs.size === 1) drag = {x:e.clientX, y:e.clientY, cx:cam.x, cy:cam.y, t:performance.now(), moved:false, button:e.button};
-  else if (ptrs.size === 2){
-    const [a, b] = [...ptrs.values()];
-    pinch = {d:Math.hypot(a.x-b.x, a.y-b.y), s:cam.s, mx:(a.x+b.x)/2, my:(a.y+b.y)/2, cx:cam.x, cy:cam.y};
-    if (drag) drag.moved = true;
-  }
-});
-canvas.addEventListener("pointermove", e => {
-  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
-  if (pinch && ptrs.size >= 2){
-    const [a, b] = [...ptrs.values()];
-    const d = Math.hypot(a.x-b.x, a.y-b.y), mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
-    const ns = Math.max(MIN_S(), Math.min(MAX_S, pinch.s * d / pinch.d));
-    const wx = (pinch.mx - W/2) / pinch.s + pinch.cx, wy = (pinch.my - H/2) / pinch.s + pinch.cy;
-    cam.s = ns; cam.x = wx - (mx - W/2) / ns; cam.y = wy - (my - H/2) / ns; redraw(); return;
-  }
-  if (drag){
-    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!drag.moved && Math.hypot(dx, dy) > (e.pointerType === "mouse" ? 4 : 9)){ drag.moved = true; canvas.classList.add("dragging"); hideTip(); }
-    if (drag.moved){ cam.x = drag.cx - dx / cam.s; cam.y = drag.cy - dy / cam.s; redraw(); }
-    return;
-  }
-  if (e.pointerType === "mouse") hoverAt(e.clientX, e.clientY);
-});
-function endPtr(e){
-  ptrs.delete(e.pointerId);
-  if (ptrs.size < 2) pinch = null;
-  if (drag && ptrs.size === 0){
-    const wasTap = !drag.moved && performance.now() - drag.t < 600;
-    canvas.classList.remove("dragging");
-    if (wasTap && e.type === "pointerup") tap(e.clientX, e.clientY, e.pointerType, drag.button);
-    drag = null;
-  }
-}
-canvas.addEventListener("pointerup", endPtr);
-canvas.addEventListener("pointercancel", endPtr);
-canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse" && !drag){ st.hover = null; hideTip(); refreshPreview(); redraw(); } });
-canvas.addEventListener("wheel", e => { e.preventDefault(); zoomAt(Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0015)), e.clientX, e.clientY); if (st.hover != null) hoverAt(e.clientX, e.clientY); }, {passive:false});
-canvas.addEventListener("contextmenu", e => e.preventDefault());
+      /* ---------- interaction ---------- */
+      let touchMode = false;
+      function nodeAt(sx, sy, touch) {
+        const [wx, wy] = toWorld(sx, sy);
+        let best = null,
+          bd = Infinity;
+        const minR = (touch ? 22 : 9) / cam.s;
+        for (const n of st.tree.nodes) {
+          if (n.t === "mastery" || n.t === "start") continue;
+          const d = Math.hypot(n.x - wx, n.y - wy),
+            r = Math.max(HIT_R[n.t] || 40, minR);
+          if (d < r && d < bd) {
+            bd = d;
+            best = n;
+          }
+        }
+        return best;
+      }
+      const ptrs = new Map();
+      let drag = null,
+        pinch = null;
+      canvas.addEventListener("pointerdown", (e) => {
+        canvas.setPointerCapture(e.pointerId);
+        ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        touchMode = e.pointerType !== "mouse";
+        if (ptrs.size === 1)
+          drag = {
+            x: e.clientX,
+            y: e.clientY,
+            cx: cam.x,
+            cy: cam.y,
+            t: performance.now(),
+            moved: false,
+            button: e.button,
+          };
+        else if (ptrs.size === 2) {
+          const [a, b] = [...ptrs.values()];
+          pinch = {
+            d: Math.hypot(a.x - b.x, a.y - b.y),
+            s: cam.s,
+            mx: (a.x + b.x) / 2,
+            my: (a.y + b.y) / 2,
+            cx: cam.x,
+            cy: cam.y,
+          };
+          if (drag) drag.moved = true;
+        }
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (ptrs.has(e.pointerId))
+          ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch && ptrs.size >= 2) {
+          const [a, b] = [...ptrs.values()];
+          const d = Math.hypot(a.x - b.x, a.y - b.y),
+            mx = (a.x + b.x) / 2,
+            my = (a.y + b.y) / 2;
+          const ns = Math.max(
+            MIN_S(),
+            Math.min(MAX_S, (pinch.s * d) / pinch.d),
+          );
+          const wx = (pinch.mx - W / 2) / pinch.s + pinch.cx,
+            wy = (pinch.my - H / 2) / pinch.s + pinch.cy;
+          cam.s = ns;
+          cam.x = wx - (mx - W / 2) / ns;
+          cam.y = wy - (my - H / 2) / ns;
+          redraw();
+          return;
+        }
+        if (drag) {
+          const dx = e.clientX - drag.x,
+            dy = e.clientY - drag.y;
+          if (
+            !drag.moved &&
+            Math.hypot(dx, dy) > (e.pointerType === "mouse" ? 4 : 9)
+          ) {
+            drag.moved = true;
+            canvas.classList.add("dragging");
+            hideTip();
+          }
+          if (drag.moved) {
+            cam.x = drag.cx - dx / cam.s;
+            cam.y = drag.cy - dy / cam.s;
+            redraw();
+          }
+          return;
+        }
+        if (e.pointerType === "mouse") hoverAt(e.clientX, e.clientY);
+      });
+      function endPtr(e) {
+        ptrs.delete(e.pointerId);
+        if (ptrs.size < 2) pinch = null;
+        if (drag && ptrs.size === 0) {
+          const wasTap = !drag.moved && performance.now() - drag.t < 600;
+          canvas.classList.remove("dragging");
+          if (wasTap && e.type === "pointerup")
+            tap(e.clientX, e.clientY, e.pointerType, drag.button);
+          drag = null;
+        }
+      }
+      canvas.addEventListener("pointerup", endPtr);
+      canvas.addEventListener("pointercancel", endPtr);
+      canvas.addEventListener("pointerleave", (e) => {
+        if (e.pointerType === "mouse" && !drag) {
+          st.hover = null;
+          hideTip();
+          refreshPreview();
+          redraw();
+        }
+      });
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          zoomAt(
+            Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0015)),
+            e.clientX,
+            e.clientY,
+          );
+          if (st.hover != null) hoverAt(e.clientX, e.clientY);
+        },
+        { passive: false },
+      );
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
-function hoverAt(x, y){
-  const n = nodeAt(x, y, false);
-  const id = n ? n.id : null;
-  canvas.classList.toggle("pointer", !!n);
-  if (id !== st.hover){ st.hover = id; refreshPreview(); redraw(); }
-  if (n) showTip(n, x, y); else hideTip();
-}
-function tap(x, y, type, button){
-  const n = nodeAt(x, y, type !== "mouse");
-  if (type === "mouse"){
-    if (!n) return;
-    if (button === 2){ select(n.id); return; }
-    toggle(n.id); select(n.id, false); hoverAt(x, y);
-  } else {
-    if (!n){ st.selected = null; refreshPreview(); renderPanel(); redraw(); return; }
-    select(n.id, true);
-  }
-}
-function select(id, open = true){
-  st.selected = id; refreshPreview();
-  if (open || st.tab === "node"){ st.tab = "node"; setTab("node"); }
-  if (open) showPanel(true);
-  renderPanel(); redraw();
-}
+      function hoverAt(x, y) {
+        const n = nodeAt(x, y, false);
+        const id = n ? n.id : null;
+        canvas.classList.toggle("pointer", !!n);
+        if (id !== st.hover) {
+          st.hover = id;
+          refreshPreview();
+          redraw();
+        }
+        if (n) showTip(n, x, y);
+        else hideTip();
+      }
+      function tap(x, y, type, button) {
+        const n = nodeAt(x, y, type !== "mouse");
+        if (type === "mouse") {
+          if (!n) return;
+          if (button === 2) {
+            select(n.id);
+            return;
+          }
+          toggle(n.id);
+          select(n.id, false);
+          hoverAt(x, y);
+        } else {
+          if (!n) {
+            st.selected = null;
+            refreshPreview();
+            renderPanel();
+            redraw();
+            return;
+          }
+          select(n.id, true);
+        }
+      }
+      function select(id, open = true) {
+        st.selected = id;
+        refreshPreview();
+        if (open || st.tab === "node") {
+          st.tab = "node";
+          setTab("node");
+        }
+        if (open) showPanel(true);
+        renderPanel();
+        redraw();
+      }
 
-/* ---------- tooltip & panel ---------- */
-const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function nodeHTML(n, inTip){
-  let h = `<div class="nname" style="color:${TYPE_COLOR[n.t]}">${esc(n.n || "Start")}</div><div class="ntype">${TYPE_LABEL[n.t]}${st.alloc.has(n.id) ? " · allocated" : ""}</div>`;
-  for (const s of n.s || []) h += `<div class="stat">${esc(s)}</div>`;
-  if (n.v){
-    const cur = st.alloc.has(n.id) ? (st.variants.get(n.id) ?? 0) : -1;
-    if (inTip){
-      h += `<div class="rem">Choose one effect:</div>`;
-      n.v.forEach((v, i) => { h += `<div class="stat" style="${i === cur ? "color:#e9cf8a" : ""}">${i === cur ? "◆ " : "◇ "}${esc(v.s.join("\n"))}</div>`; });
-    } else {
-      h += `<div class="rem">Choose one effect${cur < 0 ? " (allocate the node first)" : ""}:</div>`;
-      n.v.forEach((v, i) => { h += `<label class="variant ${i === cur ? "on" : ""}"><input type="radio" name="var" value="${i}" ${i === cur ? "checked" : ""} ${cur < 0 ? "disabled" : ""}><span class="stat" style="margin:0">${esc(v.s.join("\n"))}</span></label>`; });
-    }
-  }
-  for (const r of n.r || []) h += `<div class="rem">${esc(r)}</div>`;
-  if (n.f) h += `<div class="flav">${esc(n.f.join("\n"))}</div>`;
-  return h;
-}
-function actionInfo(n){
-  if (st.alloc.has(n.id)){ const k = removalFor(n.id).size; return {remove:true, k}; }
-  return {remove:false, k:pathTo(n.id).length};
-}
-function showTip(n, x, y){
-  const tip = $("#tip"); const a = actionInfo(n);
-  tip.innerHTML = nodeHTML(n, true) + `<div class="hint">${a.remove ? `Click to <b class="r">remove</b> (−${a.k} point${a.k === 1 ? "" : "s"})` : a.k ? `Click to <b>allocate</b> (+${a.k} point${a.k === 1 ? "" : "s"})` : "Not reachable"}${mechDiffHTML(n)}</div>`;
-  tip.style.display = "block";
-  const r = tip.getBoundingClientRect();
-  let tx = x + 18, ty = y + 18;
-  if (tx + r.width > W - 8) tx = x - r.width - 18;
-  if (ty + r.height > H - 8) ty = Math.max(56, H - r.height - 8);
-  tip.style.left = tx + "px"; tip.style.top = ty + "px";
-}
-function hideTip(){ $("#tip").style.display = "none"; }
-function setTab(t){ st.tab = t; document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === t)); renderPanel(); }
-function showPanel(on){ $("#panel").classList.toggle("hidden", !on); }
+      /* ---------- tooltip & panel ---------- */
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+        );
+      function nodeHTML(n, inTip) {
+        let h = `<div class="nname" style="color:${TYPE_COLOR[n.t]}">${esc(n.n || "Start")}</div><div class="ntype">${TYPE_LABEL[n.t]}${st.alloc.has(n.id) ? " · allocated" : ""}</div>`;
+        for (const s of n.s || []) h += `<div class="stat">${esc(s)}</div>`;
+        if (n.v) {
+          const cur = st.alloc.has(n.id) ? (st.variants.get(n.id) ?? 0) : -1;
+          if (inTip) {
+            h += `<div class="rem">Choose one effect:</div>`;
+            n.v.forEach((v, i) => {
+              h += `<div class="stat" style="${i === cur ? "color:#e9cf8a" : ""}">${i === cur ? "◆ " : "◇ "}${esc(v.s.join("\n"))}</div>`;
+            });
+          } else {
+            h += `<div class="rem">Choose one effect${cur < 0 ? " (allocate the node first)" : ""}:</div>`;
+            n.v.forEach((v, i) => {
+              h += `<label class="variant ${i === cur ? "on" : ""}"><input type="radio" name="var" value="${i}" ${i === cur ? "checked" : ""} ${cur < 0 ? "disabled" : ""}><span class="stat" style="margin:0">${esc(v.s.join("\n"))}</span></label>`;
+            });
+          }
+        }
+        for (const r of n.r || []) h += `<div class="rem">${esc(r)}</div>`;
+        if (n.f) h += `<div class="flav">${esc(n.f.join("\n"))}</div>`;
+        return h;
+      }
+      function actionInfo(n) {
+        if (st.alloc.has(n.id)) {
+          const k = removalFor(n.id).size;
+          return { remove: true, k };
+        }
+        return { remove: false, k: pathTo(n.id).length };
+      }
+      function showTip(n, x, y) {
+        const tip = $("#tip");
+        const a = actionInfo(n);
+        tip.innerHTML =
+          nodeHTML(n, true) +
+          `<div class="hint">${a.remove ? `Click to <b class="r">remove</b> (−${a.k} point${a.k === 1 ? "" : "s"})` : a.k ? `Click to <b>allocate</b> (+${a.k} point${a.k === 1 ? "" : "s"})` : "Not reachable"}${mechDiffHTML(n)}</div>`;
+        tip.style.display = "block";
+        const r = tip.getBoundingClientRect();
+        let tx = x + 18,
+          ty = y + 18;
+        if (tx + r.width > W - 8) tx = x - r.width - 18;
+        if (ty + r.height > H - 8) ty = Math.max(56, H - r.height - 8);
+        tip.style.left = tx + "px";
+        tip.style.top = ty + "px";
+      }
+      function hideTip() {
+        $("#tip").style.display = "none";
+      }
+      function setTab(t) {
+        st.tab = t;
+        document
+          .querySelectorAll(".tabs button[data-tab]")
+          .forEach((b) => b.classList.toggle("on", b.dataset.tab === t));
+        renderPanel();
+      }
+      function showPanel(on) {
+        $("#panel").classList.toggle("hidden", !on);
+      }
 
-function fmtNum(x){ return Number.isInteger(x) ? String(x) : String(+x.toFixed(2)); }
-function summary(){
-  const agg = new Map(); const notables = [], keystones = [], gateways = [];
-  for (const id of st.alloc){
-    const n = st.byId.get(id); if (!n || n.t === "start") continue;
-    if (n.t === "notable") notables.push(n); else if (n.t === "keystone") keystones.push(n); else if (n.t === "wormhole") gateways.push(n);
-    let lines = n.s || [];
-    if (n.v) lines = lines.concat(n.v[st.variants.get(id) ?? 0].s);
-    for (const raw of lines){
-      if (n.t === "wormhole") continue;
-      const line = raw.replace(/\s*\n\s*/g, " ");
-      // only percentages get summed; other numbers (tiers, counts like "1-15") stay part of the text
-      const nums = (line.match(/\d+(?:\.\d+)?(?=%)/g) || []).map(Number);
-      const tpl = line.replace(/\d+(?:\.\d+)?(?=%)/g, "#");
-      const cur = agg.get(tpl);
-      if (cur){ cur.n++; cur.nums = cur.nums.map((v, i) => v + (nums[i] || 0)); }
-      else agg.set(tpl, {n:1, nums});
-    }
-  }
-  return {agg, notables, keystones, gateways};
-}
-function renderPanel(){
-  const body = $("#pbody");
-  if (st.tab === "node"){
-    const n = st.selected != null ? st.byId.get(st.selected) : null;
-    if (!n){ body.innerHTML = `<div class="empty">${touchMode ? "Tap a node to see it here, then allocate it with the button." : "Hover a node for details. Click to allocate along the shortest path; click an allocated node to remove it (and anything that depends on it). Right-click to inspect without allocating."}</div>` + helpHTML(); return; }
-    const a = actionInfo(n);
-    body.innerHTML = nodeHTML(n, false) + `<div class="actions">${n.t === "start" ? "" : a.remove ? `<button id="actBtn">Remove (−${a.k})</button>` : `<button id="actBtn" class="primary" ${a.k ? "" : "disabled"}>Allocate (+${a.k})</button>`}<button id="locBtn">Center</button></div>` + (n.t !== "start" ? mechDiffHTML(n).replace('class="tipm"', 'class="tipm" style="margin-top:12px"') : "");
-    body.querySelectorAll("input[name=var]").forEach(inp => inp.addEventListener("change", () => { snapshot(); st.variants.set(n.id, +inp.value); changed(); }));
-    $("#actBtn")?.addEventListener("click", () => { toggle(n.id); });
-    $("#locBtn").addEventListener("click", () => centerOn(n, .25));
-  } else if (st.tab === "spawns"){
-    body.innerHTML = spawnsHTML();
-    body.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
-      const k = b.dataset.k; highlightNodes(st.mechNodes.get(k) || [], mechLabel(k));
-      if (W <= 760) showPanel(false);
-    }));
-  } else {
-    const {agg, notables, keystones, gateways} = summary();
-    if (st.alloc.size <= 1){ body.innerHTML = `<div class="empty">Nothing allocated yet.</div>`; return; }
-    let h = "";
-    if (keystones.length) h += `<div class="sumh">Keystones</div>` + keystones.map(n => `<span class="chip k" data-id="${n.id}">${esc(n.n)}</span>`).join("");
-    if (notables.length) h += `<div class="sumh">Notables (${notables.length})</div>` + notables.sort((a,b) => a.n.localeCompare(b.n)).map(n => `<span class="chip" data-id="${n.id}">${esc(n.n)}</span>`).join("");
-    if (gateways.length) h += `<div class="sumh">Gateways</div>` + gateways.map(n => `<span class="chip" data-id="${n.id}">${esc(n.n)}</span>`).join("");
-    h += `<div class="sumh">Combined effects</div>`;
-    const rows = [...agg].sort((a, b) => a[0].localeCompare(b[0]));
-    for (const [tpl, v] of rows){ let i = 0; const text = tpl.replace(/#/g, () => fmtNum(v.nums[i++] ?? 0)); h += `<div class="srow"><div class="stat">${esc(text)}</div>${v.n > 1 ? `<span class="cnt">×${v.n}</span>` : ""}</div>`; }
-    body.innerHTML = h;
-    body.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => { const n = st.byId.get(+c.dataset.id); select(n.id); centerOn(n, .2); }));
-  }
-}
-function helpHTML(){
-  return `<div class="sumh" style="margin-top:18px">Tips</div>
+      function fmtNum(x) {
+        return Number.isInteger(x) ? String(x) : String(+x.toFixed(2));
+      }
+      function summary() {
+        const agg = new Map();
+        const notables = [],
+          keystones = [],
+          gateways = [];
+        for (const id of st.alloc) {
+          const n = st.byId.get(id);
+          if (!n || n.t === "start") continue;
+          if (n.t === "notable") notables.push(n);
+          else if (n.t === "keystone") keystones.push(n);
+          else if (n.t === "wormhole") gateways.push(n);
+          let lines = n.s || [];
+          if (n.v) lines = lines.concat(n.v[st.variants.get(id) ?? 0].s);
+          for (const raw of lines) {
+            if (n.t === "wormhole") continue;
+            const line = raw.replace(/\s*\n\s*/g, " ");
+            // only percentages get summed; other numbers (tiers, counts like "1-15") stay part of the text
+            const nums = (line.match(/\d+(?:\.\d+)?(?=%)/g) || []).map(Number);
+            const tpl = line.replace(/\d+(?:\.\d+)?(?=%)/g, "#");
+            const cur = agg.get(tpl);
+            if (cur) {
+              cur.n++;
+              cur.nums = cur.nums.map((v, i) => v + (nums[i] || 0));
+            } else agg.set(tpl, { n: 1, nums });
+          }
+        }
+        return { agg, notables, keystones, gateways };
+      }
+      function renderPanel() {
+        const body = $("#pbody");
+        if (st.tab === "node") {
+          const n = st.selected != null ? st.byId.get(st.selected) : null;
+          if (!n) {
+            body.innerHTML =
+              `<div class="empty">${touchMode ? "Tap a node to see it here, then allocate it with the button." : "Hover a node for details. Click to allocate along the shortest path; click an allocated node to remove it (and anything that depends on it). Right-click to inspect without allocating."}</div>` +
+              helpHTML();
+            return;
+          }
+          const a = actionInfo(n);
+          body.innerHTML =
+            nodeHTML(n, false) +
+            `<div class="actions">${n.t === "start" ? "" : a.remove ? `<button id="actBtn">Remove (−${a.k})</button>` : `<button id="actBtn" class="primary" ${a.k ? "" : "disabled"}>Allocate (+${a.k})</button>`}<button id="locBtn">Center</button></div>` +
+            (n.t !== "start"
+              ? mechDiffHTML(n).replace(
+                  'class="tipm"',
+                  'class="tipm" style="margin-top:12px"',
+                )
+              : "");
+          body.querySelectorAll("input[name=var]").forEach((inp) =>
+            inp.addEventListener("change", () => {
+              snapshot();
+              st.variants.set(n.id, +inp.value);
+              changed();
+            }),
+          );
+          $("#actBtn")?.addEventListener("click", () => {
+            toggle(n.id);
+          });
+          $("#locBtn").addEventListener("click", () => centerOn(n, 0.25));
+        } else if (st.tab === "spawns") {
+          body.innerHTML = spawnsHTML();
+          body.querySelectorAll("[data-k]").forEach((b) =>
+            b.addEventListener("click", () => {
+              const k = b.dataset.k;
+              highlightNodes(st.mechNodes.get(k) || [], mechLabel(k));
+              if (W <= 760) showPanel(false);
+            }),
+          );
+        } else {
+          const { agg, notables, keystones, gateways } = summary();
+          if (st.alloc.size <= 1) {
+            body.innerHTML = `<div class="empty">Nothing allocated yet.</div>`;
+            return;
+          }
+          let h = "";
+          if (keystones.length)
+            h +=
+              `<div class="sumh">Keystones</div>` +
+              keystones
+                .map(
+                  (n) =>
+                    `<span class="chip k" data-id="${n.id}">${esc(n.n)}</span>`,
+                )
+                .join("");
+          if (notables.length)
+            h +=
+              `<div class="sumh">Notables (${notables.length})</div>` +
+              notables
+                .sort((a, b) => a.n.localeCompare(b.n))
+                .map(
+                  (n) =>
+                    `<span class="chip" data-id="${n.id}">${esc(n.n)}</span>`,
+                )
+                .join("");
+          if (gateways.length)
+            h +=
+              `<div class="sumh">Gateways</div>` +
+              gateways
+                .map(
+                  (n) =>
+                    `<span class="chip" data-id="${n.id}">${esc(n.n)}</span>`,
+                )
+                .join("");
+          h += `<div class="sumh">Combined effects</div>`;
+          const rows = [...agg].sort((a, b) => a[0].localeCompare(b[0]));
+          for (const [tpl, v] of rows) {
+            let i = 0;
+            const text = tpl.replace(/#/g, () => fmtNum(v.nums[i++] ?? 0));
+            h += `<div class="srow"><div class="stat">${esc(text)}</div>${v.n > 1 ? `<span class="cnt">×${v.n}</span>` : ""}</div>`;
+          }
+          body.innerHTML = h;
+          body.querySelectorAll(".chip").forEach((c) =>
+            c.addEventListener("click", () => {
+              const n = st.byId.get(+c.dataset.id);
+              select(n.id);
+              centerOn(n, 0.2);
+            }),
+          );
+        }
+      }
+      function helpHTML() {
+        return `<div class="sumh" style="margin-top:18px">Tips</div>
   <div class="rem" style="font-style:normal">• Drag to pan, scroll or pinch to zoom.<br>• Search highlights matching nodes in orange; press Enter to jump between them.<br>• Some notables let you pick one of two effects — choose it in this panel after allocating.<br>• Share copies a link with your whole tree in it. You can also import pathofexile.com atlas tree links.</div>`;
-}
+      }
 
-/* ---------- search ---------- */
-function runSearch(q){
-  q = q.trim().toLowerCase(); st.matchIdx = -1;
-  if (q.length < 2){ st.matches = []; st.matchSet = new Set(); $("#matchinfo").textContent = ""; redraw(); return; }
-  st.matches = st.tree.nodes.filter(n => n.t !== "mastery" && n.t !== "start" && ((n.n || "").toLowerCase().includes(q) || (n.s || []).some(s => s.toLowerCase().includes(q)) || (n.v || []).some(v => v.s.some(s => s.toLowerCase().includes(q)))));
-  st.matchSet = new Set(st.matches.map(n => n.id));
-  $("#matchinfo").textContent = st.matches.length ? `${st.matches.length} match${st.matches.length === 1 ? "" : "es"}` : "No matches";
-  redraw();
-}
-$("#search").addEventListener("input", e => runSearch(e.target.value));
-$("#search").addEventListener("keydown", e => {
-  if (e.key === "Enter" && st.matches.length){
-    st.matchIdx = (st.matchIdx + (e.shiftKey ? -1 : 1) + st.matches.length) % st.matches.length;
-    const n = st.matches[st.matchIdx]; select(n.id, W > 760); centerOn(n, .18);
-    $("#matchinfo").textContent = `${st.matchIdx + 1} / ${st.matches.length}`;
-  } else if (e.key === "Escape"){ e.target.value = ""; runSearch(""); e.target.blur(); }
-});
+      /* ---------- search ---------- */
+      function runSearch(q) {
+        q = q.trim().toLowerCase();
+        st.matchIdx = -1;
+        if (q.length < 2) {
+          st.matches = [];
+          st.matchSet = new Set();
+          $("#matchinfo").textContent = "";
+          redraw();
+          return;
+        }
+        st.matches = st.tree.nodes.filter(
+          (n) =>
+            n.t !== "mastery" &&
+            n.t !== "start" &&
+            ((n.n || "").toLowerCase().includes(q) ||
+              (n.s || []).some((s) => s.toLowerCase().includes(q)) ||
+              (n.v || []).some((v) =>
+                v.s.some((s) => s.toLowerCase().includes(q)),
+              )),
+        );
+        st.matchSet = new Set(st.matches.map((n) => n.id));
+        $("#matchinfo").textContent = st.matches.length
+          ? `${st.matches.length} match${st.matches.length === 1 ? "" : "es"}`
+          : "No matches";
+        redraw();
+      }
+      $("#search").addEventListener("input", (e) => runSearch(e.target.value));
+      $("#search").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && st.matches.length) {
+          st.matchIdx =
+            (st.matchIdx + (e.shiftKey ? -1 : 1) + st.matches.length) %
+            st.matches.length;
+          const n = st.matches[st.matchIdx];
+          select(n.id, W > 760);
+          centerOn(n, 0.18);
+          $("#matchinfo").textContent =
+            `${st.matchIdx + 1} / ${st.matches.length}`;
+        } else if (e.key === "Escape") {
+          e.target.value = "";
+          runSearch("");
+          e.target.blur();
+        }
+      });
 
-/* ---------- share dialog ---------- */
-function toast(msg){ const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = "none", 2200); }
-async function copyText(text, input){
-  try { await navigator.clipboard.writeText(text); toast("Copied"); }
-  catch { input.focus(); input.select(); toast("Press Ctrl+C / long-press to copy"); }
-}
-function openShare(){
-  $("#shareLink").value = shareURL(); $("#longLink").value = shareURL(true);
-  const code = toB64url(encodeBytes());
-  $("#officialCode").value = code;
-  $("#officialNote").innerHTML = st.key === "ruthless"
-    ? "Same binary format as pathofexile.com's atlas planner (switch it to Ruthless there)."
-    : `Same binary format as pathofexile.com's atlas planner. <a style="color:var(--gold2)" href="https://www.pathofexile.com/atlas-skill-tree/${code}" target="_blank" rel="noopener">Open on pathofexile.com ↗</a>`;
-  $("#importMsg").textContent = ""; $("#importMsg").className = "note";
-  $("#shareDlg").showModal();
-}
-$("#shareBtn").addEventListener("click", openShare);
-$("#dlgClose").addEventListener("click", () => $("#shareDlg").close());
-$("#copyLink").addEventListener("click", () => copyText($("#shareLink").value, $("#shareLink")));
-$("#copyLong").addEventListener("click", () => copyText($("#longLink").value, $("#longLink")));
-$("#copyOfficial").addEventListener("click", () => copyText($("#officialCode").value, $("#officialCode")));
-$("#importBtn").addEventListener("click", async () => {
-  const msg = $("#importMsg"); const text = $("#importText").value;
-  if (!text.trim()) return;
-  const before = {a:[...st.alloc], v:[...st.variants], k:st.key};
-  try {
-    const dropped = await readCode(text);
-    st.history.push({a:before.a, v:before.v}); $("#undoBtn").disabled = false;
-    changed(false); fit(); $("#shareLink").value = shareURL(); $("#longLink").value = shareURL(true); $("#officialCode").value = toB64url(encodeBytes());
-    msg.className = "note ok"; msg.textContent = `Imported ${used()} points` + (dropped > 0 ? ` (${dropped} unknown or disconnected nodes skipped)` : "");
-  } catch (e){
-    msg.className = "note err"; msg.textContent = "Couldn't import: " + e.message;
-  }
-});
+      /* ---------- share dialog ---------- */
+      function toast(msg) {
+        const t = $("#toast");
+        t.textContent = msg;
+        t.style.display = "block";
+        clearTimeout(toast.t);
+        toast.t = setTimeout(() => (t.style.display = "none"), 2200);
+      }
+      async function copyText(text, input) {
+        try {
+          await navigator.clipboard.writeText(text);
+          toast("Copied");
+        } catch {
+          input.focus();
+          input.select();
+          toast("Press Ctrl+C / long-press to copy");
+        }
+      }
+      function openShare() {
+        $("#shareLink").value = shareURL();
+        $("#longLink").value = shareURL(true);
+        const code = toB64url(encodeBytes());
+        $("#officialCode").value = code;
+        $("#officialNote").innerHTML =
+          st.key === "ruthless"
+            ? "Same binary format as pathofexile.com's atlas planner (switch it to Ruthless there)."
+            : `Same binary format as pathofexile.com's atlas planner. <a style="color:var(--gold2)" href="https://www.pathofexile.com/atlas-skill-tree/${code}" target="_blank" rel="noopener">Open on pathofexile.com ↗</a>`;
+        $("#importMsg").textContent = "";
+        $("#importMsg").className = "note";
+        $("#shareDlg").showModal();
+      }
+      $("#shareBtn").addEventListener("click", openShare);
+      $("#dlgClose").addEventListener("click", () => $("#shareDlg").close());
+      $("#copyLink").addEventListener("click", () =>
+        copyText($("#shareLink").value, $("#shareLink")),
+      );
+      $("#copyLong").addEventListener("click", () =>
+        copyText($("#longLink").value, $("#longLink")),
+      );
+      $("#copyOfficial").addEventListener("click", () =>
+        copyText($("#officialCode").value, $("#officialCode")),
+      );
+      $("#importBtn").addEventListener("click", async () => {
+        const msg = $("#importMsg");
+        const text = $("#importText").value;
+        if (!text.trim()) return;
+        const before = { a: [...st.alloc], v: [...st.variants], k: st.key };
+        try {
+          const dropped = await readCode(text);
+          st.history.push({ a: before.a, v: before.v });
+          $("#undoBtn").disabled = false;
+          changed(false);
+          fit();
+          $("#shareLink").value = shareURL();
+          $("#longLink").value = shareURL(true);
+          $("#officialCode").value = toB64url(encodeBytes());
+          msg.className = "note ok";
+          msg.textContent =
+            `Imported ${used()} points` +
+            (dropped > 0
+              ? ` (${dropped} unknown or disconnected nodes skipped)`
+              : "");
+        } catch (e) {
+          msg.className = "note err";
+          msg.textContent = "Couldn't import: " + e.message;
+        }
+      });
 
-/* ---------- wiring ---------- */
-$("#undoBtn").addEventListener("click", undo);
-$("#spawnBtn").addEventListener("click", () => { setTab("spawns"); showPanel(true); });
-$("#resetBtn").addEventListener("click", reset);
-$("#zin").addEventListener("click", () => zoomAt(1.4, W/2, H/2));
-$("#zout").addEventListener("click", () => zoomAt(1/1.4, W/2, H/2));
-$("#zfit").addEventListener("click", fit);
-$("#closePanel").addEventListener("click", () => showPanel(false));
-$("#panelToggle").addEventListener("click", () => showPanel($("#panel").classList.contains("hidden")));
-document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
-$("#treeSel").addEventListener("change", async e => {
-  const keep = {ids:[...st.alloc].filter(i => i !== START_ID), variants:[...st.variants].map(([id, idx]) => [st.byId.get(id).v[idx].e, id])};
-  await loadTree(e.target.value); st.history = []; $("#undoBtn").disabled = true;
-  applyDecoded(keep); st.selected = null; runSearch($("#search").value); changed(false);
-});
-addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA"){ e.preventDefault(); undo(); }
-  if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA"){ e.preventDefault(); $("#search").focus(); }
-});
-addEventListener("resize", resize);
-new ResizeObserver(() => document.documentElement.style.setProperty("--hh", document.querySelector("header").offsetHeight + "px")).observe(document.querySelector("header"));
-addEventListener("hashchange", async () => { if (location.hash === lastHash) return; await loadFromHash(); changed(false); });
+      /* ---------- wiring ---------- */
+      $("#undoBtn").addEventListener("click", undo);
+      $("#spawnBtn").addEventListener("click", () => {
+        setTab("spawns");
+        showPanel(true);
+      });
+      $("#resetBtn").addEventListener("click", reset);
+      $("#zin").addEventListener("click", () => zoomAt(1.4, W / 2, H / 2));
+      $("#zout").addEventListener("click", () => zoomAt(1 / 1.4, W / 2, H / 2));
+      $("#zfit").addEventListener("click", fit);
+      $("#closePanel").addEventListener("click", () => showPanel(false));
+      $("#panelToggle").addEventListener("click", () =>
+        showPanel($("#panel").classList.contains("hidden")),
+      );
+      document
+        .querySelectorAll(".tabs button[data-tab]")
+        .forEach((b) =>
+          b.addEventListener("click", () => setTab(b.dataset.tab)),
+        );
+      $("#treeSel").addEventListener("change", async (e) => {
+        const keep = {
+          ids: [...st.alloc].filter((i) => i !== START_ID),
+          variants: [...st.variants].map(([id, idx]) => [
+            st.byId.get(id).v[idx].e,
+            id,
+          ]),
+        };
+        await loadTree(e.target.value);
+        st.history = [];
+        $("#undoBtn").disabled = true;
+        applyDecoded(keep);
+        st.selected = null;
+        runSearch($("#search").value);
+        changed(false);
+      });
+      addEventListener("keydown", (e) => {
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          e.key.toLowerCase() === "z" &&
+          document.activeElement.tagName !== "INPUT" &&
+          document.activeElement.tagName !== "TEXTAREA"
+        ) {
+          e.preventDefault();
+          undo();
+        }
+        if (
+          e.key === "/" &&
+          document.activeElement.tagName !== "INPUT" &&
+          document.activeElement.tagName !== "TEXTAREA"
+        ) {
+          e.preventDefault();
+          $("#search").focus();
+        }
+      });
+      addEventListener("resize", resize);
+      new ResizeObserver(() =>
+        document.documentElement.style.setProperty(
+          "--hh",
+          document.querySelector("header").offsetHeight + "px",
+        ),
+      ).observe(document.querySelector("header"));
+      addEventListener("hashchange", async () => {
+        if (location.hash === lastHash) return;
+        await loadFromHash();
+        changed(false);
+      });
 
-(async function init(){
-  try {
-    resize();
-    await loadSprites();
-    const h = location.hash;
-    await loadTree(/^#r1?-/.test(h) ? "ruthless" : "standard");
-    if (W <= 760) showPanel(false);
-    await loadFromHash();
-    $("#undoBtn").disabled = true;
-    changed(false); fit();
-    $("#loading").remove();
-  } catch (e){
-    $("#loading").textContent = "Couldn't load the atlas data: " + e.message;
-    console.error(e);
-  }
-})();
-</script>
-</body>
+      (async function init() {
+        try {
+          resize();
+          await loadSprites();
+          const h = location.hash;
+          await loadTree(/^#r1?-/.test(h) ? "ruthless" : "standard");
+          if (W <= 760) showPanel(false);
+          await loadFromHash();
+          $("#undoBtn").disabled = true;
+          changed(false);
+          fit();
+          $("#loading").remove();
+        } catch (e) {
+          $("#loading").textContent =
+            "Couldn't load the atlas data: " + e.message;
+          console.error(e);
+        }
+      })();
+    </script>
+  </body>
 </html>
